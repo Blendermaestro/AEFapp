@@ -1,0 +1,33 @@
+name: tyokorttisovellus
+description: A modular Flutter app for managing daily work logs and exporting to PDF/Excel templates
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  shared_preferences: ^2.2.2
+  excel: ^4.0.6
+  path_provider: ^2.1.5
+  open_file: ^3.5.10
+  share_plus: ^11.0.0
+  universal_html: ^2.2.4
+  pdf: ^3.11.3
+  printing: ^5.14.2
+  syncfusion_flutter_pdf: ^29.2.7+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/ 
