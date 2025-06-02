@@ -209,50 +209,14 @@ class _WorkCardScreenState extends State<WorkCardScreen>
                 ),
               ),
               
-              // Global Notice (shared) - only show on PDF tab
-              AnimatedBuilder(
-                animation: _tabController,
-                builder: (context, child) {
-                  if (_tabController.index == 0) { // PDF tab
-                    return GlobalNoticeField(
-                      value: globalNotice,
-                      onChanged: (value) => setState(() => _saveGlobalNotice(value)),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              
-              // Excel-specific fields (only show when Excel tab is active)
-              AnimatedBuilder(
-                animation: _tabController,
-                builder: (context, child) {
-                  if (_tabController.index == 1) {
-                    return ExcelSpecificFields(
-                      comments: comments,
-                      extraWork: extraWork,
-                      onCommentsChanged: (newComments) => setState(() {
-                        comments = newComments;
-                        _saveExcelFields();
-                      }),
-                      onExtraWorkChanged: (newExtraWork) => setState(() {
-                        extraWork = newExtraWork;
-                        _saveExcelFields();
-                      }),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              
-              // Profession Cards
+              // Profession Cards and Bottom Fields
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // PDF Tab - Profession cards
+                    // PDF Tab - Profession cards with global notice scrolling above
                     _buildProfessionCardsList(isPDFTab: true),
-                    // Excel Tab - Profession cards  
+                    // Excel Tab - Profession cards with excel fields scrolling above
                     _buildProfessionCardsList(isPDFTab: false),
                   ],
                 ),
@@ -272,22 +236,55 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   Widget _buildProfessionCardsList({required bool isPDFTab}) {
     return ListView.builder(
       padding: const EdgeInsets.all(8),
-      itemCount: professionCards.length,
+      itemCount: professionCards.length + 1, // +1 for the header fields
       itemBuilder: (context, index) {
+        // First item: show the specific fields for each tab
+        if (index == 0) {
+          if (isPDFTab) {
+            // PDF tab: Global Notice Field
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GlobalNoticeField(
+                value: globalNotice,
+                onChanged: (value) => setState(() => _saveGlobalNotice(value)),
+              ),
+            );
+          } else {
+            // Excel tab: Excel Specific Fields
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ExcelSpecificFields(
+                comments: comments,
+                extraWork: extraWork,
+                onCommentsChanged: (newComments) => setState(() {
+                  comments = newComments;
+                  _saveExcelFields();
+                }),
+                onExtraWorkChanged: (newExtraWork) => setState(() {
+                  extraWork = newExtraWork;
+                  _saveExcelFields();
+                }),
+              ),
+            );
+          }
+        }
+        
+        // Profession cards (adjust index since first item is the fields)
+        final cardIndex = index - 1;
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: ProfessionCard(
-            data: professionCards[index],
+            data: professionCards[cardIndex],
             isPDFTab: isPDFTab,
             onDataChanged: (newData) {
               setState(() {
-                professionCards[index] = newData;
+                professionCards[cardIndex] = newData;
                 _saveProfessionCards();
               });
             },
             onDelete: () {
               setState(() {
-                professionCards.removeAt(index);
+                professionCards.removeAt(cardIndex);
                 _saveProfessionCards();
               });
             },

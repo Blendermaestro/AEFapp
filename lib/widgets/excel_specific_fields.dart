@@ -73,47 +73,11 @@ class _ExcelSpecificFieldsState extends State<ExcelSpecificFields> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Comments Section
-          Row(
-            children: [
-              const Text(
-                'Erityishuomio',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: 4),
-              if (_getLastNonEmptyIndex(widget.comments) < 2)
-                IconButton(
-                  onPressed: _addComment,
-                  icon: const Icon(Icons.add_circle),
-                  iconSize: 14,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          // Comments Section - removed header row
           ..._buildCommentFields(),
           const SizedBox(height: 8),
 
-          // Extra Work Section
-          Row(
-            children: [
-              const Text(
-                'Lisätyö',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: 4),
-              if (_getLastNonEmptyIndex(widget.extraWork) < 2)
-                IconButton(
-                  onPressed: _addExtraWork,
-                  icon: const Icon(Icons.add_circle),
-                  iconSize: 14,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          // Extra Work Section - removed header row
           ..._buildExtraWorkFields(),
         ],
       ),
@@ -129,15 +93,29 @@ class _ExcelSpecificFieldsState extends State<ExcelSpecificFields> {
       fields.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: TextField(
-            controller: i < _commentControllers.length ? _commentControllers[i] : null,
-            onChanged: (value) => _updateComment(i, value),
-            decoration: InputDecoration(
-              hintText: 'Erityishuomio ${i + 1}',
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              isDense: true,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: i < _commentControllers.length ? _commentControllers[i] : null,
+                  onChanged: (value) => _updateComment(i, value),
+                  decoration: InputDecoration(
+                    hintText: 'Erityishuomio ${i + 1}',
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    isDense: true,
+                  ),
+                ),
+              ),
+              if (i == fieldsToShow - 1 && _getLastNonEmptyIndex(widget.comments) < 2)
+                IconButton(
+                  onPressed: _addComment,
+                  icon: const Icon(Icons.add_circle),
+                  iconSize: 14,
+                  padding: const EdgeInsets.only(left: 4),
+                  constraints: const BoxConstraints(),
+                ),
+            ],
           ),
         ),
       );
@@ -155,15 +133,29 @@ class _ExcelSpecificFieldsState extends State<ExcelSpecificFields> {
       fields.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: TextField(
-            controller: i < _extraWorkControllers.length ? _extraWorkControllers[i] : null,
-            onChanged: (value) => _updateExtraWork(i, value),
-            decoration: InputDecoration(
-              hintText: 'Lisätyö ${i + 1}',
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              isDense: true,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: i < _extraWorkControllers.length ? _extraWorkControllers[i] : null,
+                  onChanged: (value) => _updateExtraWork(i, value),
+                  decoration: InputDecoration(
+                    hintText: 'Lisätyö ${i + 1}',
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    isDense: true,
+                  ),
+                ),
+              ),
+              if (i == fieldsToShow - 1 && _getLastNonEmptyIndex(widget.extraWork) < 2)
+                IconButton(
+                  onPressed: _addExtraWork,
+                  icon: const Icon(Icons.add_circle),
+                  iconSize: 14,
+                  padding: const EdgeInsets.only(left: 4),
+                  constraints: const BoxConstraints(),
+                ),
+            ],
           ),
         ),
       );
