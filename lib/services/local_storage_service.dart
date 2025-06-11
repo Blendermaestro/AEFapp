@@ -114,19 +114,29 @@ class LocalStorageService {
   static Future<void> saveProfessionCards(List<ProfessionCardData> cards) async {
     final prefs = await _prefs;
     final cardsJson = cards.map((card) => card.toJson()).toList();
-    await prefs.setString(_professionCardsKey, jsonEncode(cardsJson));
+    final jsonString = jsonEncode(cardsJson);
+    print('LocalStorageService: Saving ${cards.length} cards, JSON length: ${jsonString.length}');
+    await prefs.setString(_professionCardsKey, jsonString);
+    print('LocalStorageService: Cards saved to SharedPreferences');
   }
 
   // Load profession cards
   static Future<List<ProfessionCardData>> loadProfessionCards() async {
     final prefs = await _prefs;
     final cardsString = prefs.getString(_professionCardsKey);
-    if (cardsString == null) return [];
+    print('LocalStorageService: Loading cards, stored string length: ${cardsString?.length ?? 0}');
+    if (cardsString == null) {
+      print('LocalStorageService: No cards found in storage');
+      return [];
+    }
     
     try {
       final cardsList = jsonDecode(cardsString) as List;
-      return cardsList.map((cardJson) => ProfessionCardData.fromJson(cardJson)).toList();
+      final cards = cardsList.map((cardJson) => ProfessionCardData.fromJson(cardJson)).toList();
+      print('LocalStorageService: Successfully loaded ${cards.length} cards');
+      return cards;
     } catch (e) {
+      print('LocalStorageService: Error loading cards: $e');
       return [];
     }
   }

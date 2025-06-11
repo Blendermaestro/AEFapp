@@ -47,6 +47,9 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   
   // Shift notes (for PDF summary only, not Excel)
   List<String> shiftNotes = [''];
+  
+  // Add flag to prevent syncing during initial load
+  bool _isInitialLoad = true;
 
   @override
   void initState() {
@@ -54,22 +57,52 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     _tabController = TabController(length: 2, vsync: this);
     
     // Load saved data
-    _loadData();
+    _loadData().then((_) {
+      // Mark initial load as complete
+      _isInitialLoad = false;
+    });
   }
 
   Future<void> _loadData() async {
+    print('=== LOADING DATA ===');
+    print('Supabase isLoggedIn: ${SupabaseService.isLoggedIn}');
+    print('Supabase isAvailable: ${SupabaseService.isAvailable}');
+    
     // Try to load from cloud first if logged in, fallback to local storage
     if (SupabaseService.isLoggedIn) {
+      print('Loading from Supabase cloud...');
       try {
         // Load from Supabase
         final cloudCards = await SupabaseService.loadWorkCards();
         final cloudSettings = await SupabaseService.loadUserSettings();
         
-        if (cloudCards.isNotEmpty) {
-          professionCards = cloudCards;
+        print('Loaded ${cloudCards.length} cards from cloud');
+        
+        // Always use cloud data if logged in, even if empty
+        professionCards = cloudCards;
+        
+        // If this is the first time (no cards AND no settings), create defaults
+        if (professionCards.isEmpty && cloudSettings == null) {
+          print('First time setup detected - creating default cards');
+          professionCards = [
+            ProfessionCardData(professionName: 'Varu1'),
+            ProfessionCardData(professionName: 'Varu2'),
+            ProfessionCardData(professionName: 'Varu3'),
+            ProfessionCardData(professionName: 'Varu4'),
+            ProfessionCardData(professionName: 'Pasta1'),
+            ProfessionCardData(professionName: 'Pasta2'),
+            ProfessionCardData(professionName: 'Pora'),
+            ProfessionCardData(professionName: 'Tarvikeauto'),
+            ProfessionCardData(professionName: 'Huoltomies'),
+          ];
+          // Save the defaults to cloud immediately (without triggering _syncToCloud)
+          await SupabaseService.saveWorkCards(professionCards);
+          print('Saved default cards to cloud');
         }
         
+        // Load settings from cloud
         if (cloudSettings != null) {
+          print('Loaded settings from cloud');
           pdfSupervisor = cloudSettings['pdf_supervisor'] ?? '';
           pdfDate = cloudSettings['pdf_date'] ?? '';
           pdfShift = cloudSettings['pdf_shift'] ?? '';
@@ -80,16 +113,23 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           shiftNotes = List<String>.from(cloudSettings['shift_notes'] ?? ['']);
           comments = List<String>.from(cloudSettings['comments'] ?? ['']);
           extraWork = List<String>.from(cloudSettings['extra_work'] ?? ['']);
+        } else {
+          // Initialize empty settings for first time users
+          shiftNotes = [''];
+          comments = [''];
+          extraWork = [''];
         }
         
         setState(() {});
+        print('Successfully loaded from cloud');
         return;
       } catch (e) {
         print('Failed to load from cloud, falling back to local: $e');
       }
     }
     
-    // Fallback to local storage
+    print('Loading from local storage...');
+    // Fallback to local storage (when not logged in or cloud fails)
     pdfSupervisor = await LocalStorageService.loadPdfSupervisor();
     pdfDate = await LocalStorageService.loadPdfDate();
     pdfShift = await LocalStorageService.loadPdfShift();
@@ -106,11 +146,13 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     globalNotice = await LocalStorageService.loadGlobalNotice();
     
     final loadedCards = await LocalStorageService.loadProfessionCards();
+    print('Loaded ${loadedCards.length} cards from local storage');
     if (loadedCards.isNotEmpty) {
       professionCards = loadedCards;
     } else {
+      print('No local cards found, creating defaults');
       // Create default profession cards if no saved cards exist
-      professionCards.addAll([
+      professionCards = [
         ProfessionCardData(professionName: 'Varu1'),
         ProfessionCardData(professionName: 'Varu2'),
         ProfessionCardData(professionName: 'Varu3'),
@@ -120,21 +162,29 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         ProfessionCardData(professionName: 'Pora'),
         ProfessionCardData(professionName: 'Tarvikeauto'),
         ProfessionCardData(professionName: 'Huoltomies'),
-      ]);
+      ];
+      // Save defaults to local storage
+      LocalStorageService.saveProfessionCards(professionCards);
     }
     
     final excelFields = await LocalStorageService.loadExcelSpecificFields();
     if (excelFields.isNotEmpty) {
       comments = List<String>.from(excelFields['comments'] ?? ['']);
       extraWork = List<String>.from(excelFields['extraWork'] ?? ['']);
+    } else {
+      comments = [''];
+      extraWork = [''];
     }
     
     // Load shift notes
     final savedShiftNotes = await LocalStorageService.loadShiftNotes();
     if (savedShiftNotes.isNotEmpty) {
       shiftNotes = savedShiftNotes;
+    } else {
+      shiftNotes = [''];
     }
     
+    print('Successfully loaded from local storage');
     setState(() {});
   }
 
@@ -179,8 +229,24 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   }
 
   void _saveProfessionCards() {
+    print('=== SAVING PROFESSION CARDS ===');
+    print('Saving ${professionCards.length} cards to local storage');
+    
+    // Debug: Print details about each card
+    for (int i = 0; i < professionCards.length; i++) {
+      final card = professionCards[i];
+      print('Card $i: ${card.professionName} - PDF: "${card.pdfName1}"/"${card.pdfName2}" Excel: "${card.excelName1}"/"${card.excelName2}" Tasks: ${card.tasks.length} Equipment: "${card.equipment}"');
+    }
+    
     LocalStorageService.saveProfessionCards(professionCards);
-    _syncToCloud();
+    
+    // Only sync to cloud if not during initial load
+    if (!_isInitialLoad) {
+      print('Attempting cloud sync...');
+      _syncToCloud();
+    } else {
+      print('Skipping cloud sync - initial load');
+    }
   }
 
   void _saveExcelFields() {
@@ -188,46 +254,57 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       'comments': comments,
       'extraWork': extraWork,
     });
-    _syncToCloud();
+    
+    // Only sync to cloud if not during initial load
+    if (!_isInitialLoad) {
+      _syncToCloud();
+    }
   }
 
   void _saveShiftNotes() {
     LocalStorageService.saveShiftNotes(shiftNotes);
-    _syncToCloud();
+    
+    // Only sync to cloud if not during initial load
+    if (!_isInitialLoad) {
+      _syncToCloud();
+    }
   }
 
   // Sync all data to cloud
   Future<void> _syncToCloud() async {
-    if (!SupabaseService.isLoggedIn) return;
+    if (!SupabaseService.isLoggedIn) {
+      print('Not syncing - not logged in');
+      return;
+    }
     
     try {
+      print('=== SYNCING TO CLOUD ===');
+      
       // Save work cards
+      print('Syncing ${professionCards.length} cards to cloud...');
       await SupabaseService.saveWorkCards(professionCards);
       
       // Save user settings
-      await SupabaseService.saveUserSettings(
-        pdfSupervisor: pdfSupervisor,
-        pdfDate: pdfDate,
-        pdfShift: pdfShift,
-        excelSupervisor: excelSupervisor,
-        excelDate: excelDate,
-        excelShift: excelShift,
-        globalNotice: globalNotice,
-        shiftNotes: shiftNotes,
-        comments: comments,
-        extraWork: extraWork,
-      );
+      final settings = {
+        'pdf_supervisor': pdfSupervisor,
+        'pdf_date': pdfDate,
+        'pdf_shift': pdfShift,
+        'excel_supervisor': excelSupervisor,
+        'excel_date': excelDate,
+        'excel_shift': excelShift,
+        'global_notice': globalNotice,
+        'shift_notes': shiftNotes,
+        'comments': comments,
+        'extra_work': extraWork,
+      };
+      
+      print('Syncing settings to cloud...');
+      await SupabaseService.saveUserSettings(settings);
+      
+      print('Successfully synced all data to cloud');
     } catch (e) {
       print('Failed to sync to cloud: $e');
-      // Show error to user if needed
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sync failed: ${e.toString()}'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      // Don't rethrow - let the app continue working with local data
     }
   }
 
@@ -694,6 +771,33 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           backgroundColor: Colors.green,
         ),
       );
+    }
+  }
+
+  Future<void> _saveData() async {
+    print('=== SAVING DATA ===');
+    print('Is initial load: $_isInitialLoad');
+    
+    // Always save to local storage
+    await LocalStorageService.saveProfessionCards(professionCards);
+    await LocalStorageService.savePdfSupervisor(pdfSupervisor);
+    await LocalStorageService.savePdfDate(pdfDate);
+    await LocalStorageService.savePdfShift(pdfShift);
+    await LocalStorageService.saveExcelSupervisor(excelSupervisor);
+    await LocalStorageService.saveExcelDate(excelDate);
+    await LocalStorageService.saveExcelShift(excelShift);
+    await LocalStorageService.saveGlobalNotice(globalNotice);
+    await LocalStorageService.saveShiftNotes(shiftNotes);
+    await LocalStorageService.saveExcelSpecificFields(comments, extraWork);
+    
+    print('Saved to local storage');
+    
+    // Only sync to cloud if not during initial load and user is logged in
+    if (!_isInitialLoad && SupabaseService.isLoggedIn) {
+      print('Syncing to cloud...');
+      await _syncToCloud();
+    } else {
+      print('Skipping cloud sync - initial load: $_isInitialLoad, logged in: ${SupabaseService.isLoggedIn}');
     }
   }
 }

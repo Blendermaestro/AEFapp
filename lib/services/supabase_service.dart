@@ -187,38 +187,44 @@ class SupabaseService {
   }
   
   /// Save user settings to cloud
-  static Future<void> saveUserSettings({
-    required String pdfSupervisor,
-    required String pdfDate,
-    required String pdfShift,
-    required String excelSupervisor,
-    required String excelDate,
-    required String excelShift,
-    required String globalNotice,
-    required List<String> shiftNotes,
-    required List<String> comments,
-    required List<String> extraWork,
-  }) async {
-    if (!isLoggedIn) return;
-    
-    final settingsData = {
-      'user_id': currentUser!.id,
-      'pdf_supervisor': pdfSupervisor,
-      'pdf_date': pdfDate,
-      'pdf_shift': pdfShift,
-      'excel_supervisor': excelSupervisor,
-      'excel_date': excelDate,
-      'excel_shift': excelShift,
-      'global_notice': globalNotice,
-      'shift_notes': shiftNotes,
-      'comments': comments,
-      'extra_work': extraWork,
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-    
-    await client
-        ?.from('user_settings')
-        .upsert(settingsData);
+  static Future<void> saveUserSettings(Map<String, dynamic> settings) async {
+    if (!isLoggedIn) {
+      print('SupabaseService: Not logged in, cannot save user settings');
+      return;
+    }
+
+    try {
+      final currentUser = client?.auth.currentUser;
+      if (currentUser == null) {
+        print('SupabaseService: No current user');
+        return;
+      }
+
+      final userSettings = {
+        'user_id': currentUser.id,
+        'pdf_supervisor': settings['pdf_supervisor'] ?? '',
+        'pdf_date': settings['pdf_date'] ?? '',
+        'pdf_shift': settings['pdf_shift'] ?? '',
+        'excel_supervisor': settings['excel_supervisor'] ?? '',
+        'excel_date': settings['excel_date'] ?? '',
+        'excel_shift': settings['excel_shift'] ?? '',
+        'global_notice': settings['global_notice'] ?? '',
+        'shift_notes': settings['shift_notes'] ?? [],
+        'comments': settings['comments'] ?? [],
+        'extra_work': settings['extra_work'] ?? [],
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      print('SupabaseService: Saving user settings to user_settings table');
+      await client
+          ?.from('user_settings')
+          .upsert(userSettings, onConflict: 'user_id');
+      
+      print('SupabaseService: Successfully saved user settings');
+    } catch (e) {
+      print('SupabaseService: Error saving user settings: $e');
+      rethrow;
+    }
   }
   
   /// Load user settings from cloud
