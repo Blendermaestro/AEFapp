@@ -788,7 +788,10 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     await LocalStorageService.saveExcelShift(excelShift);
     await LocalStorageService.saveGlobalNotice(globalNotice);
     await LocalStorageService.saveShiftNotes(shiftNotes);
-    await LocalStorageService.saveExcelSpecificFields(comments, extraWork);
+    await LocalStorageService.saveExcelSpecificFields({
+      'comments': comments,
+      'extraWork': extraWork,
+    });
     
     print('Saved to local storage');
     
