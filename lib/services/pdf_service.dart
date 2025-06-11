@@ -55,9 +55,22 @@ class PdfService {
       
       // Merge all individual PDFs into one final document
       final mergedPdf = await _mergeAllPdfs(individualPdfs);
-      await _savePdfFile(mergedPdf, pdfSupervisor, pdfShift, pdfDate);
       
-      print('✅ PDF export completed successfully! Generated ${individualPdfs.length} worker PDFs and merged them.');
+      // Generate summary page with Excel names and add it to the end
+      final summaryPdf = await _generateSummaryPage(
+        supervisor: pdfSupervisor,
+        shift: pdfShift,
+        date: pdfDate,
+        globalNotice: globalNotice,
+        professionCards: professionCards,
+      );
+      
+      // Merge the main document with the summary page
+      final finalPdf = await _addSummaryPageToDocument(mergedPdf, summaryPdf);
+      
+      await _savePdfFile(finalPdf, pdfSupervisor, pdfShift, pdfDate);
+      
+      print('✅ PDF export completed successfully! Generated ${individualPdfs.length} worker PDFs, merged them, and added summary page.');
       
     } catch (e) {
       print('❌ PDF export error: $e');
@@ -335,7 +348,7 @@ class PdfService {
           
           // Add new page to merged document (inherits landscape orientation)
           final PdfPage newPage = mergedDocument.pages.add();
-          final PdfGraphics graphics = newPage.graphics;
+          PdfGraphics graphics = newPage.graphics;
           
           // Create template from source page
           final PdfTemplate template = sourcePage.createTemplate();
@@ -390,6 +403,239 @@ class PdfService {
     return Uint8List.fromList(mergedBytes);
   }
   
+  /// Generate A4 portrait summary page with all workcard data using Excel names
+  static Future<Uint8List> _generateSummaryPage({
+    required String supervisor,
+    required String shift,
+    required String date,
+    required String globalNotice,
+    required List<ProfessionCardData> professionCards,
+  }) async {
+    print('📄 Generating summary page...');
+    
+    // Create new PDF document with A4 portrait orientation
+    final PdfDocument document = PdfDocument();
+    document.pageSettings.orientation = PdfPageOrientation.portrait;
+    document.pageSettings.size = PdfPageSize.a4;
+    document.pageSettings.margins.all = 20;
+    
+    // Add page
+    final PdfPage page = document.pages.add();
+    PdfGraphics graphics = page.graphics;
+    
+    // Create fonts
+    final PdfFont titleFont = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
+    final PdfFont headerFont = PdfStandardFont(PdfFontFamily.helvetica, 12, style: PdfFontStyle.bold);
+    final PdfFont normalFont = PdfStandardFont(PdfFontFamily.helvetica, 10);
+    final PdfFont smallFont = PdfStandardFont(PdfFontFamily.helvetica, 8);
+    
+    // Create brushes
+    final PdfBrush blackBrush = PdfSolidBrush(PdfColor(0, 0, 0));
+    final PdfBrush blueBrush = PdfSolidBrush(PdfColor(0, 0, 255));
+    final PdfBrush grayBrush = PdfSolidBrush(PdfColor(100, 100, 100));
+    
+    double yPosition = 20;
+    final double pageWidth = page.size.width - 40; // Account for margins
+    
+    // Title
+    graphics.drawString(
+      'Work Summary - $shift Workers',
+      titleFont,
+      brush: blackBrush,
+      bounds: Rect.fromLTWH(20, yPosition, pageWidth, 20),
+    );
+    yPosition += 30;
+    
+    // Basic information
+    graphics.drawString('Date: $date', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
+    graphics.drawString('Supervisor: $supervisor', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(250, yPosition, 200, 15));
+    yPosition += 20;
+    graphics.drawString('Shift: $shift', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
+    yPosition += 30;
+    
+    // Global Notice
+    if (globalNotice.isNotEmpty) {
+      graphics.drawString('Global Notice:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
+      yPosition += 18;
+      graphics.drawString(globalNotice, normalFont, brush: blueBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 40));
+      yPosition += 50;
+    }
+    
+    // Workers by profession
+    graphics.drawString('Workers by Profession:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
+    yPosition += 20;
+    
+    // Get Excel names grouped by profession
+    final Map<String, List<String>> workersByProfession = _getExcelNamesByProfession(professionCards);
+    
+    for (final entry in workersByProfession.entries) {
+      final profession = entry.key.isEmpty ? 'Unassigned' : entry.key;
+      final workers = entry.value;
+      
+      // Profession name
+      graphics.drawString(
+        '$profession (${workers.length} workers):',
+        normalFont,
+        brush: blackBrush,
+        bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+        format: PdfStringFormat(alignment: PdfTextAlignment.left),
+      );
+      yPosition += 15;
+      
+      // Workers list
+      final workersText = workers.join(', ');
+      graphics.drawString(
+        workersText,
+        smallFont,
+        brush: grayBrush,
+        bounds: Rect.fromLTWH(40, yPosition, pageWidth - 20, 30),
+        format: PdfStringFormat(alignment: PdfTextAlignment.left),
+      );
+      yPosition += 25;
+    }
+    
+    yPosition += 10;
+    
+    // Detailed profession cards
+    graphics.drawString('Detailed Work Information:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
+    yPosition += 20;
+    
+    for (final card in professionCards) {
+      // Check if we need a new page
+      if (yPosition > page.size.height - 150) {
+        // Add new page
+        final newPage = document.pages.add();
+        graphics = newPage.graphics;
+        yPosition = 20;
+      }
+      
+      if (card.professionName.isNotEmpty || card.excelName1.isNotEmpty || card.excelName2.isNotEmpty) {
+        // Profession name
+        graphics.drawString(
+          '• ${card.professionName.isEmpty ? 'Unassigned' : card.professionName}',
+          normalFont,
+          brush: blackBrush,
+          bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+        );
+        yPosition += 15;
+        
+        // Excel workers
+        final excelWorkers = [card.excelName1, card.excelName2]
+            .where((name) => name.isNotEmpty)
+            .join(', ');
+        if (excelWorkers.isNotEmpty) {
+          graphics.drawString(
+            '  Workers: $excelWorkers',
+            smallFont,
+            brush: grayBrush,
+            bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+          );
+          yPosition += 12;
+        }
+        
+        // Equipment
+        if (card.equipment.isNotEmpty || card.equipmentLocation.isNotEmpty) {
+          final equipment = _combineEquipmentWithLocation(card.equipment, card.equipmentLocation);
+          graphics.drawString(
+            '  Equipment: $equipment',
+            smallFont,
+            brush: grayBrush,
+            bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+          );
+          yPosition += 12;
+        }
+        
+        // Tasks
+        final activeTasks = card.tasks.where((task) => task.task.isNotEmpty).toList();
+        if (activeTasks.isNotEmpty) {
+          graphics.drawString(
+            '  Tasks:',
+            smallFont,
+            brush: grayBrush,
+            bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+          );
+          yPosition += 12;
+          
+          for (final task in activeTasks) {
+            final taskText = task.taskNotice.isNotEmpty ? '${task.task} - ${task.taskNotice}' : task.task;
+            graphics.drawString(
+              '    - $taskText',
+              smallFont,
+              brush: grayBrush,
+              bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+            );
+            yPosition += 12;
+          }
+        }
+        
+        yPosition += 8; // Space between cards
+      }
+    }
+    
+    // Save the document
+    final List<int> pdfBytes = await document.save();
+    document.dispose();
+    
+    print('✅ Summary page generated successfully');
+    return Uint8List.fromList(pdfBytes);
+  }
+  
+  /// Get Excel names grouped by profession
+  static Map<String, List<String>> _getExcelNamesByProfession(List<ProfessionCardData> professionCards) {
+    final Map<String, List<String>> result = {};
+    
+    for (final card in professionCards) {
+      final profession = card.professionName.isEmpty ? '' : card.professionName;
+      
+      if (!result.containsKey(profession)) {
+        result[profession] = [];
+      }
+      
+      if (card.excelName1.isNotEmpty) {
+        result[profession]!.add(card.excelName1);
+      }
+      if (card.excelName2.isNotEmpty) {
+        result[profession]!.add(card.excelName2);
+      }
+    }
+    
+    // Remove empty profession entries with no workers
+    result.removeWhere((key, value) => value.isEmpty);
+    
+    return result;
+  }
+  
+  /// Add summary page to the main document
+  static Future<Uint8List> _addSummaryPageToDocument(Uint8List mainPdfBytes, Uint8List summaryPdfBytes) async {
+    print('🔗 Adding summary page to main document...');
+    
+    // Load main document
+    final PdfDocument mainDocument = PdfDocument(inputBytes: mainPdfBytes);
+    
+    // Load summary document
+    final PdfDocument summaryDocument = PdfDocument(inputBytes: summaryPdfBytes);
+    
+    // Add all pages from summary to main document
+    for (int i = 0; i < summaryDocument.pages.count; i++) {
+      final PdfPage summaryPage = summaryDocument.pages[i];
+      final PdfTemplate template = summaryPage.createTemplate();
+      
+      // Add new page to main document with A4 portrait orientation
+      final PdfPage newPage = mainDocument.pages.add();
+      PdfGraphics graphics = newPage.graphics;
+      graphics.drawPdfTemplate(template, const Offset(0, 0), template.size);
+    }
+    
+    // Save combined document
+    final List<int> finalBytes = await mainDocument.save();
+    
+    mainDocument.dispose();
+    summaryDocument.dispose();
+    
+    print('✅ Summary page added to main document');
+    return Uint8List.fromList(finalBytes);
+  }
+  
   /// Create PDF without template (fallback)
   static Future<Uint8List> _createPdfWithoutTemplate({
     required String workerName,
@@ -404,7 +650,7 @@ class PdfService {
     
     // Add page
     final PdfPage page = document.pages.add();
-    final PdfGraphics graphics = page.graphics;
+    PdfGraphics graphics = page.graphics;
     
     // Create font and brush
     final PdfFont font = PdfStandardFont(PdfFontFamily.helvetica, 10);
