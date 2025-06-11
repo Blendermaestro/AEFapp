@@ -29,7 +29,7 @@ jobs:
       run: flutter pub get
     
     - name: Build web
-      run: flutter build web --base-href /AEFapp/
+      run: flutter build web --base-href /AEFapp/ --dart-define=SUPABASE_URL=https://zkgrctejqujcmsdebten.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprZ3JjdGVqcXVqY21zZGVidGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MzY1ODMsImV4cCI6MjA2NTIxMjU4M30.SWQc9ORjpi90a-wZQ32NdnFE3R_gH0GmVALHnHcLb9k
     
     - name: Setup Pages
       uses: actions/configure-pages@v4

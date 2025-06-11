@@ -245,55 +245,24 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       appBar: AppBar(
         title: Row(
           children: [
-            // Authentication status indicator (no title text)
+            // Authentication status indicator
             if (SupabaseService.isLoggedIn)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade300),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.cloud_done, size: 16, color: Colors.green.shade700),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Synced',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.green.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+              Tooltip(
+                message: 'Cloud sync enabled',
+                child: Icon(Icons.cloud_done, color: Colors.green),
+              )
+            else if (SupabaseService.isAvailable)
+              Tooltip(
+                message: 'Cloud sync available. Press the user icon to log in.',
+                child: Icon(Icons.cloud_queue, color: Colors.orange),
               )
             else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade300),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.cloud_off, size: 16, color: Colors.orange.shade700),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Local',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+              Tooltip(
+                message: 'Using local storage only. Cloud sync is not available.',
+                child: Icon(Icons.cloud_off, color: Colors.red),
               ),
+            SizedBox(width: 8),
+            const Text('Work Card'),
           ],
         ),
         actions: [
@@ -318,52 +287,17 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             tooltip: 'Export Excel',
           ),
           // Authentication button
-          if (SupabaseService.isLoggedIn)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.account_circle),
-              tooltip: 'Account',
-              onSelected: (value) {
-                if (value == 'logout') {
-                  _confirmLogout();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'info',
-                  enabled: false,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        SupabaseService.currentUser?.email ?? 'User',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text(
-                        'Logged in • Data synced',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout),
-                      SizedBox(width: 8),
-                      Text('Sign Out'),
-                    ],
-                  ),
-                ),
-              ],
-            )
-          else
-            IconButton(
-              onPressed: widget.onShowAuth,
-              icon: const Icon(Icons.login),
-              tooltip: 'Sign In to Sync',
-            ),
+          IconButton(
+            icon: Icon(SupabaseService.isLoggedIn ? Icons.logout : Icons.person),
+            onPressed: () {
+              if (SupabaseService.isLoggedIn) {
+                SupabaseService.signOut();
+                setState(() {}); // Re-render to update UI
+              } else {
+                widget.onShowAuth();
+              }
+            },
+          ),
           // Settings (right)
           IconButton(
             onPressed: () => _openSettings(isDarkMode),
@@ -760,55 +694,6 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           backgroundColor: Colors.green,
         ),
       );
-    }
-  }
-
-  Future<void> _confirmLogout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text(
-            'Are you sure you want to sign out?\n\nYour data will remain saved in the cloud and you can sign back in anytime.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Sign Out'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldLogout == true) {
-      try {
-        await SupabaseService.signOut();
-        setState(() {});
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Signed out successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to sign out: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
     }
   }
 }

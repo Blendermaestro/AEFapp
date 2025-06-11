@@ -4,10 +4,24 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 class SupabaseService {
-  static const String supabaseUrl = 'https://zkgrctejqujcmsdebten.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprZ3JjdGVqcXVqY21zZGVidGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MzY1ODMsImV4cCI6MjA2NTIxMjU4M30.SWQc9ORjpi90a-wZQ32NdnFE3R_gH0GmVALHnHcLb9k';
+  // Define keys for environment variables
+  static const String supabaseUrlEnvKey = 'SUPABASE_URL';
+  static const String supabaseAnonKeyEnvKey = 'SUPABASE_ANON_KEY';
+
+  // Attempt to get credentials from environment variables, with fallbacks to hardcoded values.
+  static const String supabaseUrl = String.fromEnvironment(
+    supabaseUrlEnvKey,
+    defaultValue: 'https://zkgrctejqujcmsdebten.supabase.co',
+  );
+  static const String supabaseAnonKey = String.fromEnvironment(
+    supabaseAnonKeyEnvKey,
+    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprZ3JjdGVqcXVqY21zZGVidGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MzY1ODMsImV4cCI6MjA2NTIxMjU4M30.SWQc9ORjpi90a-wZQ32NdnFE3R_gH0GmVALHnHcLb9k',
+  );
   
   static bool _isAvailable = false;
+  static bool isConfigured = false;
+  
+  static bool get isAvailable => _isAvailable;
   
   static SupabaseClient? get client {
     try {
@@ -35,17 +49,33 @@ class SupabaseService {
   
   /// Initialize Supabase with error handling
   static Future<void> initialize() async {
+    // Check if the app is running with credentials from environment variables
+    isConfigured = const bool.hasEnvironment(supabaseUrlEnvKey) &&
+                   const bool.hasEnvironment(supabaseAnonKeyEnvKey);
+
+    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+      _isAvailable = false;
+      print('Supabase credentials are not configured. App will use local storage only.');
+      print('To enable Supabase, provide SUPABASE_URL and SUPABASE_ANON_KEY via --dart-define.');
+      return;
+    }
+
     try {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
       );
       _isAvailable = true;
-      print('Supabase initialized successfully');
+      if (isConfigured) {
+        print('Supabase initialized successfully using credentials from environment variables.');
+      } else {
+        print('Supabase initialized successfully using hardcoded credentials.');
+        print('WARNING: For production, use --dart-define to set Supabase credentials.');
+      }
     } catch (e) {
       _isAvailable = false;
       print('Supabase initialization failed: $e');
-      // App continues to work with local storage only
+      print('App will use local storage only.');
     }
   }
   
