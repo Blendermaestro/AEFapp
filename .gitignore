@@ -33,7 +33,6 @@
 
 # Web related
 # Keep docs for GitHub Pages but ignore the generated plugin registrant
-lib/generated_plugin_registrant.dart
 
 # Symbolication related
 app.*.symbols

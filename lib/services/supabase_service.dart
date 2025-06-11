@@ -5,18 +5,48 @@ import 'package:crypto/crypto.dart';
 
 class SupabaseService {
   static const String supabaseUrl = 'https://zkgrctejqujcmsdebten.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprZ3JjdGVqcXVqY21zZGVidGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4NTIwOTcsImV4cCI6MjA0OTQyODA5N30.D1vHmRMxJOL1Z1Dn3j1vQnVlUIcBHDGSd6bpvKzH9iI';
+  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprZ3JjdGVqcXVqY21zZGVidGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MzY1ODMsImV4cCI6MjA2NTIxMjU4M30.SWQc9ORjpi90a-wZQ32NdnFE3R_gH0GmVALHnHcLb9k';
   
-  static SupabaseClient get client => Supabase.instance.client;
-  static User? get currentUser => client.auth.currentUser;
-  static bool get isLoggedIn => currentUser != null;
+  static bool _isAvailable = false;
   
-  /// Initialize Supabase
+  static SupabaseClient? get client {
+    try {
+      return _isAvailable ? Supabase.instance.client : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  static User? get currentUser {
+    try {
+      return client?.auth.currentUser;
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  static bool get isLoggedIn {
+    try {
+      return currentUser != null && _isAvailable;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  /// Initialize Supabase with error handling
   static Future<void> initialize() async {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-    );
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+      );
+      _isAvailable = true;
+      print('Supabase initialized successfully');
+    } catch (e) {
+      _isAvailable = false;
+      print('Supabase initialization failed: $e');
+      // App continues to work with local storage only
+    }
   }
   
   /// Sign up with email and password
@@ -25,11 +55,22 @@ class SupabaseService {
     required String password,
     String? displayName,
   }) async {
-    return await client.auth.signUp(
-      email: email,
-      password: password,
-      data: displayName != null ? {'display_name': displayName} : null,
-    );
+    if (!_isAvailable || client == null) {
+      throw Exception('Cloud sync is currently unavailable. Please try again later.');
+    }
+    
+    try {
+      return await client!.auth.signUp(
+        email: email,
+        password: password,
+        data: displayName != null ? {'display_name': displayName} : null,
+      );
+    } catch (e) {
+      if (e.toString().contains('401')) {
+        throw Exception('Authentication service is temporarily unavailable. Please try again later.');
+      }
+      rethrow;
+    }
   }
   
   /// Sign in with email and password
@@ -37,15 +78,26 @@ class SupabaseService {
     required String email,
     required String password,
   }) async {
-    return await client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    if (!_isAvailable || client == null) {
+      throw Exception('Cloud sync is currently unavailable. Please try again later.');
+    }
+    
+    try {
+      return await client!.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+    } catch (e) {
+      if (e.toString().contains('401')) {
+        throw Exception('Authentication service is temporarily unavailable. Please try again later.');
+      }
+      rethrow;
+    }
   }
   
   /// Sign out
   static Future<void> signOut() async {
-    await client.auth.signOut();
+    await client?.auth.signOut();
   }
   
   /// Save work cards to cloud
@@ -54,7 +106,7 @@ class SupabaseService {
     
     // Delete existing cards for this user
     await client
-        .from('work_cards')
+        ?.from('work_cards')
         .delete()
         .eq('user_id', currentUser!.id);
     
@@ -72,7 +124,7 @@ class SupabaseService {
     }).toList();
     
     if (cardsData.isNotEmpty) {
-      await client.from('work_cards').insert(cardsData);
+      await client?.from('work_cards').insert(cardsData);
     }
   }
   
@@ -81,10 +133,12 @@ class SupabaseService {
     if (!isLoggedIn) return [];
     
     final response = await client
-        .from('work_cards')
+        ?.from('work_cards')
         .select()
         .eq('user_id', currentUser!.id)
         .order('created_at');
+    
+    if (response == null) return [];
     
     return response.map<ProfessionCardData>((data) {
       return ProfessionCardData(
@@ -133,7 +187,7 @@ class SupabaseService {
     };
     
     await client
-        .from('user_settings')
+        ?.from('user_settings')
         .upsert(settingsData);
   }
   
@@ -142,7 +196,7 @@ class SupabaseService {
     if (!isLoggedIn) return null;
     
     final response = await client
-        .from('user_settings')
+        ?.from('user_settings')
         .select()
         .eq('user_id', currentUser!.id)
         .maybeSingle();
@@ -155,8 +209,8 @@ class SupabaseService {
     if (!isLoggedIn) return Stream.empty();
     
     return client
-        .from('work_cards')
+        ?.from('work_cards')
         .stream(primaryKey: ['id'])
-        .eq('user_id', currentUser!.id);
+        .eq('user_id', currentUser!.id) ?? Stream.empty();
   }
 } 
