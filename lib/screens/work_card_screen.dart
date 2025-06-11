@@ -197,7 +197,11 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       excelSupervisor = value;
       LocalStorageService.saveExcelSupervisor(value);
     }
-    _syncToCloud();
+    
+    // Only sync to cloud if not during initial load
+    if (!_isInitialLoad) {
+      _syncToCloud();
+    }
   }
 
   void _saveDate(String value, bool isPDF) {
@@ -208,7 +212,11 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       excelDate = value;
       LocalStorageService.saveExcelDate(value);
     }
-    _syncToCloud();
+    
+    // Only sync to cloud if not during initial load
+    if (!_isInitialLoad) {
+      _syncToCloud();
+    }
   }
 
   void _saveShift(String value, bool isPDF) {
@@ -219,13 +227,21 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       excelShift = value;
       LocalStorageService.saveExcelShift(value);
     }
-    _syncToCloud();
+    
+    // Only sync to cloud if not during initial load
+    if (!_isInitialLoad) {
+      _syncToCloud();
+    }
   }
 
   void _saveGlobalNotice(String value) {
     globalNotice = value;
     LocalStorageService.saveGlobalNotice(value);
-    _syncToCloud();
+    
+    // Only sync to cloud if not during initial load
+    if (!_isInitialLoad) {
+      _syncToCloud();
+    }
   }
 
   void _saveProfessionCards() {
