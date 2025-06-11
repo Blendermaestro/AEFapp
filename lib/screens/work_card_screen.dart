@@ -388,8 +388,6 @@ class _WorkCardScreenState extends State<WorkCardScreen>
                 message: 'Using local storage only. Cloud sync is not available.',
                 child: Icon(Icons.cloud_off, color: Colors.red),
               ),
-            SizedBox(width: 8),
-            const Text('Work Card'),
           ],
         ),
         actions: [
@@ -401,6 +399,15 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             color: Colors.orange.shade700,
           ),
           const SizedBox(width: 8), // Add spacing between clear and export buttons
+          // Reset Account button (only show if logged in)
+          if (SupabaseService.isLoggedIn)
+            IconButton(
+              onPressed: _confirmResetAccount,
+              icon: const Icon(Icons.delete_forever),
+              tooltip: 'Reset Account Data',
+              color: Colors.red.shade800,
+            ),
+          const SizedBox(width: 8),
           // PDF Export
           IconButton(
             onPressed: _exportPDF,
@@ -829,6 +836,92 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           backgroundColor: Colors.green,
         ),
       );
+    }
+  }
+
+  void _confirmResetAccount() async {
+    final shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Reset Account'),
+          content: const Text(
+            'Haluatko varmasti resetoida KAIKKI tiliin liittyvät tiedot pilvipalvelusta? \n\nTämä poistaa:\n• Kaikki työkorttitiedot\n• Kaikki asetukset\n• Kaikki tallennetut tiedot\n\nTätä toimintoa EI VOI peruuttaa!',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Peruuta'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('RESETOI KAIKKI'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldReset == true) {
+      try {
+        // Show loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resetoidaan tiliä...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Reset cloud data
+        await SupabaseService.resetUserData();
+        
+        // Reset local data
+        setState(() {
+          professionCards = [
+            ProfessionCardData(professionName: 'Varu1'),
+            ProfessionCardData(professionName: 'Varu2'),
+            ProfessionCardData(professionName: 'Varu3'),
+            ProfessionCardData(professionName: 'Varu4'),
+            ProfessionCardData(professionName: 'Pasta1'),
+            ProfessionCardData(professionName: 'Pasta2'),
+            ProfessionCardData(professionName: 'Pora'),
+            ProfessionCardData(professionName: 'Tarvikeauto'),
+            ProfessionCardData(professionName: 'Huoltomies'),
+          ];
+          pdfSupervisor = '';
+          pdfDate = '';
+          pdfShift = '';
+          excelSupervisor = '';
+          excelDate = '';
+          excelShift = '';
+          globalNotice = '';
+          shiftNotes = [''];
+          comments = [''];
+          extraWork = [''];
+        });
+        
+        // Save the fresh defaults to cloud
+        await _syncToCloud();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tili resetoitu onnistuneesti! Käytetään oletusmalleja.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } catch (e) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Virhe tilin resetoinnissa: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
