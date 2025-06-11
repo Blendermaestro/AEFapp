@@ -245,9 +245,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       appBar: AppBar(
         title: Row(
           children: [
-            const Text('Työkorttisovellus'),
-            const SizedBox(width: 8),
-            // Authentication status indicator
+            // Authentication status indicator (no title text)
             if (SupabaseService.isLoggedIn)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

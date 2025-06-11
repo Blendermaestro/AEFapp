@@ -85,7 +85,7 @@ class _WorkCardAppState extends State<WorkCardApp> {
     }
 
     return MaterialApp(
-      title: 'Työkorttisovellus',
+      title: 'Work Card App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
