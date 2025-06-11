@@ -697,6 +697,11 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     int fieldsToShow = (lastNonEmpty + 2).clamp(1, 100); // Show at least 1, at most 100
 
     for (int i = 0; i < fieldsToShow; i++) {
+      // Ensure shiftNotes list is long enough
+      while (shiftNotes.length <= i) {
+        shiftNotes.add('');
+      }
+      
       fields.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
@@ -704,8 +709,11 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             children: [
               Expanded(
                 child: TextField(
-                  controller: TextEditingController(text: i < shiftNotes.length ? shiftNotes[i] : ''),
+                  key: ValueKey('shift_note_$i'), // Add unique key
+                  controller: TextEditingController(text: shiftNotes[i])
+                    ..selection = TextSelection.collapsed(offset: shiftNotes[i].length), // Fix cursor position
                   onChanged: (value) => _updateShiftNote(i, value),
+                  textDirection: TextDirection.ltr, // Ensure left-to-right text direction
                   decoration: InputDecoration(
                     hintText: i == 0 ? 'Huomioita seuraavalle vuorolle (ei tule exceliin)' : 'Huomio ${i + 1}',
                     border: const OutlineInputBorder(),
