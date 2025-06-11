@@ -67,6 +67,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     print('=== LOADING DATA ===');
     print('Supabase isLoggedIn: ${SupabaseService.isLoggedIn}');
     print('Supabase isAvailable: ${SupabaseService.isAvailable}');
+    print('Current professionCards count BEFORE load: ${professionCards.length}');
     
     // Try to load from cloud first if logged in, fallback to local storage
     if (SupabaseService.isLoggedIn) {
@@ -77,9 +78,11 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         final cloudSettings = await SupabaseService.loadUserSettings();
         
         print('Loaded ${cloudCards.length} cards from cloud');
+        print('Cloud cards: ${cloudCards.map((c) => c.professionName).toList()}');
         
         // Always use cloud data if logged in, even if empty
         professionCards = cloudCards;
+        print('Set professionCards to cloud data, count: ${professionCards.length}');
         
         // If this is the first time (no cards AND no settings), create defaults
         if (professionCards.isEmpty && cloudSettings == null) {
@@ -95,6 +98,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             ProfessionCardData(professionName: 'Tarvikeauto'),
             ProfessionCardData(professionName: 'Huoltomies'),
           ];
+          print('Created default cards, count: ${professionCards.length}');
           // Save the defaults to cloud immediately (without triggering _syncToCloud)
           await SupabaseService.saveWorkCards(professionCards);
           print('Saved default cards to cloud');
@@ -120,6 +124,8 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           extraWork = [''];
         }
         
+        print('Final professionCards count AFTER cloud load: ${professionCards.length}');
+        print('Final cards: ${professionCards.map((c) => c.professionName).toList()}');
         setState(() {});
         print('Successfully loaded from cloud');
         return;
@@ -147,8 +153,11 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     
     final loadedCards = await LocalStorageService.loadProfessionCards();
     print('Loaded ${loadedCards.length} cards from local storage');
+    print('Local cards: ${loadedCards.map((c) => c.professionName).toList()}');
+    
     if (loadedCards.isNotEmpty) {
       professionCards = loadedCards;
+      print('Set professionCards to local data, count: ${professionCards.length}');
     } else {
       print('No local cards found, creating defaults');
       // Create default profession cards if no saved cards exist
@@ -163,6 +172,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         ProfessionCardData(professionName: 'Tarvikeauto'),
         ProfessionCardData(professionName: 'Huoltomies'),
       ];
+      print('Created default cards, count: ${professionCards.length}');
       // Save defaults to local storage
       LocalStorageService.saveProfessionCards(professionCards);
     }
@@ -184,6 +194,8 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       shiftNotes = [''];
     }
     
+    print('Final professionCards count AFTER local load: ${professionCards.length}');
+    print('Final cards: ${professionCards.map((c) => c.professionName).toList()}');
     print('Successfully loaded from local storage');
     setState(() {});
   }
