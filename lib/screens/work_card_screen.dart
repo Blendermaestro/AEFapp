@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/info_input_row.dart';
@@ -50,6 +51,10 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   
   // Add flag to prevent syncing during initial load
   bool _isInitialLoad = true;
+  
+  // Add debouncing for saves
+  Timer? _saveDebounceTimer;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -212,7 +217,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     
     // Only sync to cloud if not during initial load
     if (!_isInitialLoad) {
-      _syncToCloud();
+      _debouncedSyncToCloud();
     }
   }
 
@@ -227,7 +232,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     
     // Only sync to cloud if not during initial load
     if (!_isInitialLoad) {
-      _syncToCloud();
+      _debouncedSyncToCloud();
     }
   }
 
@@ -242,7 +247,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     
     // Only sync to cloud if not during initial load
     if (!_isInitialLoad) {
-      _syncToCloud();
+      _debouncedSyncToCloud();
     }
   }
 
@@ -252,7 +257,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     
     // Only sync to cloud if not during initial load
     if (!_isInitialLoad) {
-      _syncToCloud();
+      _debouncedSyncToCloud();
     }
   }
 
@@ -271,7 +276,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     // Only sync to cloud if not during initial load
     if (!_isInitialLoad) {
       print('Attempting cloud sync...');
-      _syncToCloud();
+      _debouncedSyncToCloud();
     } else {
       print('Skipping cloud sync - initial load');
     }
@@ -285,7 +290,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     
     // Only sync to cloud if not during initial load
     if (!_isInitialLoad) {
-      _syncToCloud();
+      _debouncedSyncToCloud();
     }
   }
 
@@ -294,17 +299,31 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     
     // Only sync to cloud if not during initial load
     if (!_isInitialLoad) {
-      _syncToCloud();
+      _debouncedSyncToCloud();
     }
+  }
+
+  // Debounced sync to cloud to prevent race conditions
+  Future<void> _debouncedSyncToCloud() async {
+    // Cancel previous timer if it exists
+    _saveDebounceTimer?.cancel();
+    
+    // Set a new timer for 500ms delay
+    _saveDebounceTimer = Timer(Duration(milliseconds: 500), () async {
+      if (!_isInitialLoad && SupabaseService.isLoggedIn && !_isSaving) {
+        await _syncToCloud();
+      }
+    });
   }
 
   // Sync all data to cloud
   Future<void> _syncToCloud() async {
-    if (!SupabaseService.isLoggedIn) {
-      print('Not syncing - not logged in');
+    if (!SupabaseService.isLoggedIn || _isSaving) {
+      print('Not syncing - not logged in or already saving');
       return;
     }
     
+    _isSaving = true;
     try {
       print('=== SYNCING TO CLOUD ===');
       
@@ -333,12 +352,15 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     } catch (e) {
       print('Failed to sync to cloud: $e');
       // Don't rethrow - let the app continue working with local data
+    } finally {
+      _isSaving = false;
     }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _saveDebounceTimer?.cancel();
     super.dispose();
   }
 

@@ -132,29 +132,53 @@ class SupabaseService {
   
   /// Save work cards to cloud
   static Future<void> saveWorkCards(List<ProfessionCardData> cards) async {
-    if (!isLoggedIn) return;
-    
-    // Delete existing cards for this user
-    await client
-        ?.from('work_cards')
-        .delete()
-        .eq('user_id', currentUser!.id);
-    
-    // Insert new cards
-    final List<Map<String, dynamic>> cardsData = cards.map((card) => {
-      'user_id': currentUser!.id,
-      'profession_name': card.professionName,
-      'pdf_name1': card.pdfName1,
-      'pdf_name2': card.pdfName2,
-      'excel_name1': card.excelName1,
-      'excel_name2': card.excelName2,
-      'tasks': card.tasks.map((task) => task.toJson()).toList(),
-      'equipment': card.equipment,
-      'equipment_location': card.equipmentLocation,
-    }).toList();
-    
-    if (cardsData.isNotEmpty) {
-      await client?.from('work_cards').insert(cardsData);
+    if (!isLoggedIn) {
+      print('SupabaseService: Not logged in, cannot save work cards');
+      return;
+    }
+
+    final currentUser = client?.auth.currentUser;
+    if (currentUser == null) {
+      print('SupabaseService: No current user');
+      return;
+    }
+
+    try {
+      print('SupabaseService: Starting transaction to save ${cards.length} work cards');
+      
+      // Delete existing cards for this user first
+      final deleteResult = await client
+          ?.from('work_cards')
+          .delete()
+          .eq('user_id', currentUser.id);
+      
+      print('SupabaseService: Deleted existing cards for user ${currentUser.id}');
+      
+      // Only insert if we have cards to save
+      if (cards.isNotEmpty) {
+        final List<Map<String, dynamic>> cardsData = cards.map((card) => {
+          'user_id': currentUser.id,
+          'profession_name': card.professionName,
+          'pdf_name1': card.pdfName1,
+          'pdf_name2': card.pdfName2,
+          'excel_name1': card.excelName1,
+          'excel_name2': card.excelName2,
+          'tasks': card.tasks.map((task) => task.toJson()).toList(),
+          'equipment': card.equipment,
+          'equipment_location': card.equipmentLocation,
+        }).toList();
+        
+        print('SupabaseService: Inserting ${cardsData.length} new cards');
+        await client?.from('work_cards').insert(cardsData);
+        print('SupabaseService: Successfully inserted cards');
+      } else {
+        print('SupabaseService: No cards to insert (empty list)');
+      }
+      
+      print('SupabaseService: Successfully saved work cards');
+    } catch (e) {
+      print('SupabaseService: Error saving work cards: $e');
+      rethrow;
     }
   }
   
