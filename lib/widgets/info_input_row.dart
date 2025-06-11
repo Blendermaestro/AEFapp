@@ -129,7 +129,9 @@ class _InfoInputRowState extends State<InfoInputRow> {
               onTap: () => _selectDate(context),
               child: Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
+                  border: Border.all(color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.grey.shade600 
+                      : Colors.grey.shade400),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -140,7 +142,9 @@ class _InfoInputRowState extends State<InfoInputRow> {
                         widget.date.isEmpty ? 'Valitse päivämäärä' : widget.date,
                         style: TextStyle(
                           fontSize: 16,
-                          color: widget.date.isEmpty ? Colors.grey.shade600 : Colors.black87,
+                          color: widget.date.isEmpty 
+                              ? Theme.of(context).hintColor
+                              : Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
                     ),
@@ -170,15 +174,18 @@ class _InfoInputRowState extends State<InfoInputRow> {
           // Manpower Count - simplified
           Container(
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
+              border: Border.all(color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.grey.shade600 
+                  : Colors.grey.shade400),
               borderRadius: BorderRadius.circular(4),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             child: Text(
               '${_calculateManpowerCount()}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
           ),

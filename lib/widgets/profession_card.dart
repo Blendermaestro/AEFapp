@@ -229,23 +229,6 @@ class _ProfessionCardState extends State<ProfessionCard> {
               ),
             ),
             const SizedBox(width: 8),
-            // Clear tasks button
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: IconButton(
-                onPressed: _confirmClearTasks,
-                icon: const Icon(Icons.playlist_remove, size: 20),
-                color: Colors.orange.shade700,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                tooltip: 'Clear Tasks',
-              ),
-            ),
-            const SizedBox(width: 8),
             // Save button with background
             Container(
               decoration: BoxDecoration(
@@ -588,44 +571,5 @@ class _ProfessionCardState extends State<ProfessionCard> {
       equipmentLocation: location,
     );
     widget.onDataChanged(newData);
-  }
-
-  Future<void> _confirmClearTasks() async {
-    final shouldClearTasks = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Tyhjennä tehtävät'),
-          content: const Text(
-            'Haluatko varmasti tyhjentää kaikki tehtävät?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Peruuta'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Tyhjennä'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldClearTasks == true) {
-      final newData = ProfessionCardData(
-        professionName: widget.data.professionName,
-        pdfName1: widget.data.pdfName1,
-        pdfName2: widget.data.pdfName2,
-        excelName1: widget.data.excelName1,
-        excelName2: widget.data.excelName2,
-        tasks: [],
-        equipment: widget.data.equipment,
-        equipmentLocation: widget.data.equipmentLocation,
-      );
-      widget.onDataChanged(newData);
-    }
   }
 } 

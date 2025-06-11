@@ -13,6 +13,7 @@ class LocalStorageService {
   static const String _namesDatabaseKey = 'names_database';
   static const String _supervisorsDatabaseKey = 'supervisors_database';
   static const String _equipmentDatabaseKey = 'equipment_database';
+  static const String _shiftNotesKey = 'shift_notes';
 
   static Future<SharedPreferences> get _prefs async =>
       await SharedPreferences.getInstance();
@@ -202,6 +203,18 @@ class LocalStorageService {
   static Future<List<String>> loadEquipmentDatabase() async {
     final prefs = await _prefs;
     return prefs.getStringList(_equipmentDatabaseKey) ?? [];
+  }
+
+  // Save shift notes
+  static Future<void> saveShiftNotes(List<String> shiftNotes) async {
+    final prefs = await _prefs;
+    await prefs.setStringList(_shiftNotesKey, shiftNotes);
+  }
+
+  // Load shift notes
+  static Future<List<String>> loadShiftNotes() async {
+    final prefs = await _prefs;
+    return prefs.getStringList(_shiftNotesKey) ?? [''];
   }
 
   // Clear all data

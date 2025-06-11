@@ -18,6 +18,7 @@ class PdfService {
     required String pdfDate,
     required String globalNotice,
     required List<ProfessionCardData> professionCards,
+    required List<String> shiftNotes,
   }) async {
     try {
       // Get all PDF names to generate individual PDFs
@@ -63,6 +64,7 @@ class PdfService {
         date: pdfDate,
         globalNotice: globalNotice,
         professionCards: professionCards,
+        shiftNotes: shiftNotes,
       );
       
       // Merge the main document with the summary page
@@ -218,9 +220,7 @@ class PdfService {
         _drawTextAt(graphics, fontMedium, blackBrush, workerName, x: 50, y: 81);   // name_1
         _drawTextAt(graphics, fontMedium, blackBrush, workerName, x: 493, y: 115); // name_2
         
-        // Equipment fields (FROM THE SPECIFIC WORK CARD) - BLUE COLOR - COMBINED
-        final combinedEquipment = _combineEquipmentWithLocation(workerCard.equipment, workerCard.equipmentLocation);
-        _drawTextAt(graphics, fontSmall, blueBrush, combinedEquipment, x: 495, y: 131); // equipment - equipmentLocation (size=7, blue)
+        // Equipment fields removed - no longer drawing equipment and location
         
         // Global notice
         _drawTextAt(graphics, fontMedium, blackBrush, globalNotice, x: 469, y: 280); // globalNotice
@@ -410,6 +410,7 @@ class PdfService {
     required String date,
     required String globalNotice,
     required List<ProfessionCardData> professionCards,
+    required List<String> shiftNotes,
   }) async {
     print('📄 Generating summary page...');
     
@@ -439,7 +440,7 @@ class PdfService {
     
     // Title
     graphics.drawString(
-      'Work Summary - $shift Workers',
+      'Yhteenveto',
       titleFont,
       brush: blackBrush,
       bounds: Rect.fromLTWH(20, yPosition, pageWidth, 20),
@@ -447,59 +448,30 @@ class PdfService {
     yPosition += 30;
     
     // Basic information
-    graphics.drawString('Date: $date', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
-    graphics.drawString('Supervisor: $supervisor', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(250, yPosition, 200, 15));
+    graphics.drawString('Päivämäärä: $date', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
+    graphics.drawString('Työnjohtaja: $supervisor', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(250, yPosition, 200, 15));
     yPosition += 20;
-    graphics.drawString('Shift: $shift', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
+    graphics.drawString('Vuoro: $shift', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
     yPosition += 30;
     
-    // Global Notice
-    if (globalNotice.isNotEmpty) {
-      graphics.drawString('Global Notice:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
+    // Shift Notes (instead of Global Notice)
+    final activeShiftNotes = shiftNotes.where((note) => note.isNotEmpty).toList();
+    if (activeShiftNotes.isNotEmpty) {
+      graphics.drawString('Huomioita seuraavalle vuorolle:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
       yPosition += 18;
-      graphics.drawString(globalNotice, normalFont, brush: blueBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 40));
-      yPosition += 50;
+      
+      for (final note in activeShiftNotes) {
+        graphics.drawString('• $note', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
+        yPosition += 18;
+      }
+      yPosition += 20;
     }
     
-    // Workers by profession
-    graphics.drawString('Workers by Profession:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
+    // Workers (simplified structure - no separate "Workers by Profession" section)
+    graphics.drawString('Työntekijät:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
     yPosition += 20;
     
-    // Get Excel names grouped by profession
-    final Map<String, List<String>> workersByProfession = _getExcelNamesByProfession(professionCards);
-    
-    for (final entry in workersByProfession.entries) {
-      final profession = entry.key.isEmpty ? 'Unassigned' : entry.key;
-      final workers = entry.value;
-      
-      // Profession name
-      graphics.drawString(
-        '$profession (${workers.length} workers):',
-        normalFont,
-        brush: blackBrush,
-        bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
-        format: PdfStringFormat(alignment: PdfTextAlignment.left),
-      );
-      yPosition += 15;
-      
-      // Workers list
-      final workersText = workers.join(', ');
-      graphics.drawString(
-        workersText,
-        smallFont,
-        brush: grayBrush,
-        bounds: Rect.fromLTWH(40, yPosition, pageWidth - 20, 30),
-        format: PdfStringFormat(alignment: PdfTextAlignment.left),
-      );
-      yPosition += 25;
-    }
-    
-    yPosition += 10;
-    
-    // Detailed profession cards
-    graphics.drawString('Detailed Work Information:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
-    yPosition += 20;
-    
+    // Profession cards with their workers
     for (final card in professionCards) {
       // Check if we need a new page
       if (yPosition > page.size.height - 150) {
@@ -509,53 +481,27 @@ class PdfService {
         yPosition = 20;
       }
       
-      if (card.professionName.isNotEmpty || card.excelName1.isNotEmpty || card.excelName2.isNotEmpty) {
-        // Profession name
+      if (card.professionName.isNotEmpty || card.pdfName1.isNotEmpty || card.pdfName2.isNotEmpty) {
+        // PDF workers (the ones that actually appear in the work cards)
+        final pdfWorkers = [card.pdfName1, card.pdfName2]
+            .where((name) => name.isNotEmpty)
+            .join(', ');
+        
+        // Profession name with workers on the same line
+        final professionText = card.professionName.isEmpty ? 'Määrittelemätön' : card.professionName;
+        final displayText = pdfWorkers.isNotEmpty ? '$professionText: $pdfWorkers' : professionText;
+        
         graphics.drawString(
-          '• ${card.professionName.isEmpty ? 'Unassigned' : card.professionName}',
+          '• $displayText',
           normalFont,
           brush: blackBrush,
           bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
         );
         yPosition += 15;
         
-        // Excel workers
-        final excelWorkers = [card.excelName1, card.excelName2]
-            .where((name) => name.isNotEmpty)
-            .join(', ');
-        if (excelWorkers.isNotEmpty) {
-          graphics.drawString(
-            '  Workers: $excelWorkers',
-            smallFont,
-            brush: grayBrush,
-            bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
-          );
-          yPosition += 12;
-        }
-        
-        // Equipment
-        if (card.equipment.isNotEmpty || card.equipmentLocation.isNotEmpty) {
-          final equipment = _combineEquipmentWithLocation(card.equipment, card.equipmentLocation);
-          graphics.drawString(
-            '  Equipment: $equipment',
-            smallFont,
-            brush: grayBrush,
-            bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
-          );
-          yPosition += 12;
-        }
-        
-        // Tasks
+        // Tasks (without header, directly listed)
         final activeTasks = card.tasks.where((task) => task.task.isNotEmpty).toList();
         if (activeTasks.isNotEmpty) {
-          graphics.drawString(
-            '  Tasks:',
-            smallFont,
-            brush: grayBrush,
-            bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
-          );
-          yPosition += 12;
-          
           for (final task in activeTasks) {
             final taskText = task.taskNotice.isNotEmpty ? '${task.task} - ${task.taskNotice}' : task.task;
             graphics.drawString(
