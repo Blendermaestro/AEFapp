@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/work_card_screen.dart';
 import 'screens/auth_screen.dart';
-import 'services/local_storage_service.dart';
 import 'services/supabase_service.dart';
 
 void main() async {
@@ -23,7 +22,7 @@ class WorkCardApp extends StatefulWidget {
 class _WorkCardAppState extends State<WorkCardApp> {
   bool _isDarkMode = false;
   bool _isLoading = true;
-  bool _showAuth = false;
+  bool _showAuth = true; // Always start with auth screen
 
   @override
   void initState() {
@@ -33,20 +32,16 @@ class _WorkCardAppState extends State<WorkCardApp> {
 
   Future<void> _initializeApp() async {
     try {
-      // Load dark mode preference
-      final savedDarkMode = await LocalStorageService.loadDarkMode();
-      
       setState(() {
-        _isDarkMode = savedDarkMode;
         _isLoading = false;
-        // Require login first - show auth screen if not logged in
+        // Always require login - no local usage allowed
         _showAuth = !SupabaseService.isLoggedIn;
       });
     } catch (e) {
       setState(() {
         _isDarkMode = false;
         _isLoading = false;
-        _showAuth = false;
+        _showAuth = true; // Force auth screen on error
       });
     }
   }
@@ -55,8 +50,7 @@ class _WorkCardAppState extends State<WorkCardApp> {
     setState(() {
       _isDarkMode = isDark;
     });
-    // Save the preference
-    await LocalStorageService.saveDarkMode(isDark);
+    // Theme preference will be stored in cloud with user settings
   }
 
   void _onAuthenticated() {

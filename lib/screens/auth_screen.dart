@@ -31,26 +31,6 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  Future<void> _handleAnonymousAuth() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      await SupabaseService.signInAnonymously();
-      widget.onAuthenticated();
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   Future<void> _handleAuth() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -109,8 +89,16 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 32),
               Text(
-                'Sync your work cards to the cloud',
+                'Kirjautuminen vaaditaan',
                 style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Kaikki tiedot tallennetaan pilvipalveluun. Kirjautuminen on pakollista.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -199,22 +187,6 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 16),
               
-              // Anonymous sign-in button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _handleAnonymousAuth,
-                  icon: const Icon(Icons.person_outline),
-                  label: const Text('Use Without Email'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.green.shade700,
-                    side: BorderSide(color: Colors.green.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
               TextButton(
                 onPressed: () {
                   setState(() {
@@ -229,11 +201,6 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              
-              TextButton(
-                onPressed: widget.onAuthenticated,
-                child: const Text('Use Local Storage Only'),
-              ),
             ],
           ),
         ),
