@@ -102,28 +102,57 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         print('Loaded ${cloudCards.length} cards from cloud');
         print('Cloud cards: ${cloudCards.map((c) => c.professionName).toList()}');
         
-        // Always use cloud data if logged in, even if empty
-        professionCards = cloudCards;
-        print('Set professionCards to cloud data, count: ${professionCards.length}');
-        
-        // If this is the first time (no cards AND no settings), create defaults
-        if (professionCards.isEmpty && cloudSettings == null) {
-          print('First time setup detected - creating default cards');
-          professionCards = [
-            ProfessionCardData(professionName: 'Varu1'),
-            ProfessionCardData(professionName: 'Varu2'),
-            ProfessionCardData(professionName: 'Varu3'),
-            ProfessionCardData(professionName: 'Varu4'),
-            ProfessionCardData(professionName: 'Pasta1'),
-            ProfessionCardData(professionName: 'Pasta2'),
-            ProfessionCardData(professionName: 'Pora'),
-            ProfessionCardData(professionName: 'Tarvikeauto'),
-            ProfessionCardData(professionName: 'Huoltomies'),
-          ];
-          print('Created default cards, count: ${professionCards.length}');
-          // Save the defaults to cloud immediately (without triggering _syncToCloud)
-          await SupabaseService.saveWorkCards(professionCards);
-          print('Saved default cards to cloud');
+        // Only use cloud data if it's actually populated OR if this is truly first time setup
+        if (cloudCards.isNotEmpty) {
+          professionCards = cloudCards;
+          print('Set professionCards to cloud data, count: ${professionCards.length}');
+        } else {
+          // Cloud is empty - check if this is first time setup or data loss
+          if (cloudSettings == null) {
+            print('First time setup detected - creating default cards');
+            professionCards = [
+              ProfessionCardData(professionName: 'Varu1'),
+              ProfessionCardData(professionName: 'Varu2'),
+              ProfessionCardData(professionName: 'Varu3'),
+              ProfessionCardData(professionName: 'Varu4'),
+              ProfessionCardData(professionName: 'Pasta1'),
+              ProfessionCardData(professionName: 'Pasta2'),
+              ProfessionCardData(professionName: 'Pora'),
+              ProfessionCardData(professionName: 'Tarvikeauto'),
+              ProfessionCardData(professionName: 'Huoltomies'),
+            ];
+            print('Created default cards, count: ${professionCards.length}');
+            // Save the defaults to cloud immediately
+            await SupabaseService.saveWorkCards(professionCards);
+            print('Saved default cards to cloud');
+          } else {
+            // User has settings but no cards - something went wrong, try local storage
+            print('Cloud has settings but no cards - possible data corruption, falling back to local storage');
+            final localCards = await LocalStorageService.loadProfessionCards();
+            if (localCards.isNotEmpty) {
+              professionCards = localCards;
+              print('Recovered ${professionCards.length} cards from local storage');
+              // Re-sync to cloud to fix the corruption
+              await SupabaseService.saveWorkCards(professionCards);
+              print('Re-synced recovered cards to cloud');
+            } else {
+              // Both cloud and local are empty but settings exist - create defaults
+              professionCards = [
+                ProfessionCardData(professionName: 'Varu1'),
+                ProfessionCardData(professionName: 'Varu2'),
+                ProfessionCardData(professionName: 'Varu3'),
+                ProfessionCardData(professionName: 'Varu4'),
+                ProfessionCardData(professionName: 'Pasta1'),
+                ProfessionCardData(professionName: 'Pasta2'),
+                ProfessionCardData(professionName: 'Pora'),
+                ProfessionCardData(professionName: 'Tarvikeauto'),
+                ProfessionCardData(professionName: 'Huoltomies'),
+              ];
+              print('Created recovery default cards, count: ${professionCards.length}');
+              await SupabaseService.saveWorkCards(professionCards);
+              print('Saved recovery cards to cloud');
+            }
+          }
         }
         
         // Load settings from cloud

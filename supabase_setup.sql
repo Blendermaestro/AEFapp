@@ -34,6 +34,8 @@ CREATE TABLE work_cards (
     tasks JSONB DEFAULT '[]'::jsonb,
     equipment TEXT DEFAULT '',
     equipment_location TEXT DEFAULT '',
+    work_site_conditions JSONB DEFAULT '[""]'::jsonb,
+    supervisor_risk_notes JSONB DEFAULT '[""]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
