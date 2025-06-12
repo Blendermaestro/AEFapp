@@ -39,8 +39,8 @@ class _WorkCardAppState extends State<WorkCardApp> {
       setState(() {
         _isDarkMode = savedDarkMode;
         _isLoading = false;
-        // Show auth screen only if user wants to login (they can skip)
-        _showAuth = false; // Start with work card screen, user can choose to login
+        // Require login first - show auth screen if not logged in
+        _showAuth = !SupabaseService.isLoggedIn;
       });
     } catch (e) {
       setState(() {

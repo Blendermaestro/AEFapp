@@ -31,6 +31,26 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
+  Future<void> _handleAnonymousAuth() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await SupabaseService.signInAnonymously();
+      widget.onAuthenticated();
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _handleAuth() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -179,6 +199,22 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 16),
               
+              // Anonymous sign-in button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _handleAnonymousAuth,
+                  icon: const Icon(Icons.person_outline),
+                  label: const Text('Use Without Email'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green.shade700,
+                    side: BorderSide(color: Colors.green.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
               TextButton(
                 onPressed: () {
                   setState(() {
@@ -196,7 +232,7 @@ class _AuthScreenState extends State<AuthScreen> {
               
               TextButton(
                 onPressed: widget.onAuthenticated,
-                child: const Text('Skip for now'),
+                child: const Text('Use Local Storage Only'),
               ),
             ],
           ),

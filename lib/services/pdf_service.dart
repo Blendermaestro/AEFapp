@@ -57,26 +57,46 @@ class PdfService {
       // Merge all individual PDFs into one final document
       final mergedPdf = await _mergeAllPdfs(individualPdfs);
       
-      // Generate summary page with Excel names and add it to the end
-      final summaryPdf = await _generateSummaryPage(
-        supervisor: pdfSupervisor,
-        shift: pdfShift,
-        date: pdfDate,
-        globalNotice: globalNotice,
-        professionCards: professionCards,
-        shiftNotes: shiftNotes,
-      );
+      // Save work cards only (no summary)
+      await _savePdfFile(mergedPdf, pdfSupervisor, pdfShift, pdfDate);
       
-      // Merge the main document with the summary page
-      final finalPdf = await _addSummaryPageToDocument(mergedPdf, summaryPdf);
-      
-      await _savePdfFile(finalPdf, pdfSupervisor, pdfShift, pdfDate);
-      
-      print('✅ PDF export completed successfully! Generated ${individualPdfs.length} worker PDFs, merged them, and added summary page.');
+      print('✅ PDF export completed successfully! Generated ${individualPdfs.length} worker PDFs and merged them.');
       
     } catch (e) {
       print('❌ PDF export error: $e');
       throw Exception('PDF export failed: $e');
+    }
+  }
+
+  /// Export only the summary page as a separate PDF
+  static Future<void> exportSummaryOnly({
+    required String supervisor,
+    required String shift,
+    required String date,
+    required List<ProfessionCardData> professionCards,
+    required List<String> shiftNotes,
+  }) async {
+    try {
+      print('📄 Exporting summary only...');
+      
+      // Generate summary page
+      final summaryPdf = await _generateSummaryPage(
+        supervisor: supervisor,
+        shift: shift,
+        date: date,
+        globalNotice: '', // Not needed for summary
+        professionCards: professionCards,
+        shiftNotes: shiftNotes,
+      );
+      
+      // Save with specific naming: Yhteenveto_supervisor_shift_date.pdf
+      await _saveSummaryPdfFile(summaryPdf, supervisor, shift, date);
+      
+      print('✅ Summary PDF export completed successfully!');
+      
+    } catch (e) {
+      print('❌ Summary PDF export error: $e');
+      throw Exception('Summary PDF export failed: $e');
     }
   }
   
@@ -235,6 +255,24 @@ class PdfService {
         _drawTextAt(graphics, fontNormal, blackBrush, task2, x: 469, y: 234); // task_2 with note
         _drawTextAt(graphics, fontNormal, blackBrush, task3, x: 469, y: 250); // task_3 with note
         _drawTextAt(graphics, fontNormal, blackBrush, task4, x: 469, y: 265); // task_4 with note
+        
+        // Work Site Conditions fields (up to 3 conditions) - NEW FEATURE
+        final workSiteCondition1 = _getWorkSiteCondition(workerCard.workSiteConditions, 0);
+        final workSiteCondition2 = _getWorkSiteCondition(workerCard.workSiteConditions, 1);
+        final workSiteCondition3 = _getWorkSiteCondition(workerCard.workSiteConditions, 2);
+        
+        _drawTextAt(graphics, fontNormal, blackBrush, workSiteCondition1, x: 470, y: 310); // workSiteCondition_1
+        _drawTextAt(graphics, fontNormal, blackBrush, workSiteCondition2, x: 470, y: 327); // workSiteCondition_2
+        _drawTextAt(graphics, fontNormal, blackBrush, workSiteCondition3, x: 470, y: 342); // workSiteCondition_3
+        
+        // Supervisor Risk Notes fields (up to 3 notes) - NEW FEATURE
+        final supervisorRiskNote1 = _getSupervisorRiskNote(workerCard.supervisorRiskNotes, 0);
+        final supervisorRiskNote2 = _getSupervisorRiskNote(workerCard.supervisorRiskNotes, 1);
+        final supervisorRiskNote3 = _getSupervisorRiskNote(workerCard.supervisorRiskNotes, 2);
+        
+        _drawTextAt(graphics, fontNormal, blackBrush, supervisorRiskNote1, x: 470, y: 373); // supervisorRiskNote_1
+        _drawTextAt(graphics, fontNormal, blackBrush, supervisorRiskNote2, x: 470, y: 388); // supervisorRiskNote_2
+        _drawTextAt(graphics, fontNormal, blackBrush, supervisorRiskNote3, x: 470, y: 404); // supervisorRiskNote_3
       } else {
         // For pages 2+ just use the template as-is (no data overlay)
         print('📋 Page ${pageIndex + 1}: Using template as-is (no data overlay)');
@@ -287,6 +325,22 @@ class PdfService {
     }
   }
   
+  /// Helper method to get work site condition at specific index
+  static String _getWorkSiteCondition(List<String>? workSiteConditions, int index) {
+    if (workSiteConditions == null || workSiteConditions.length <= index) {
+      return '';
+    }
+    return workSiteConditions[index] ?? '';
+  }
+  
+  /// Helper method to get supervisor risk note at specific index
+  static String _getSupervisorRiskNote(List<String>? supervisorRiskNotes, int index) {
+    if (supervisorRiskNotes == null || supervisorRiskNotes.length <= index) {
+      return '';
+    }
+    return supervisorRiskNotes[index] ?? '';
+  }
+  
   /// Helper method to draw text at specific coordinates
   static void _drawTextAt(PdfGraphics graphics, PdfFont font, PdfBrush brush, String text, {
     required double x,
@@ -323,72 +377,29 @@ class PdfService {
       return individualPdfs[0];
     }
     
-    // CRITICAL FIX: Create new document with FORCED LANDSCAPE orientation
+    // Create new document with landscape orientation
     final PdfDocument mergedDocument = PdfDocument();
     mergedDocument.pageSettings.orientation = PdfPageOrientation.landscape;
     mergedDocument.pageSettings.margins.all = 0;
     
-    print('🔗 Merging ${individualPdfs.length} PDFs with ROTATION FIX...');
+    print('🔗 Merging ${individualPdfs.length} PDFs...');
     
-    // Load template once to get the correct size
-    final ByteData templateData = await rootBundle.load('assets/template_workcard_blank.pdf');
-    final Uint8List templateBytes = templateData.buffer.asUint8List();
-    final PdfDocument templateDoc = PdfDocument(inputBytes: templateBytes);
-    final Size templateSize = templateDoc.pages[0].size;
-    templateDoc.dispose();
-    
-    // Process each individual PDF with proper rotation handling
+    // Process each individual PDF
     for (int i = 0; i < individualPdfs.length; i++) {
       try {
         final PdfDocument sourceDocument = PdfDocument(inputBytes: individualPdfs[i]);
         
-        // Process each page in the source document
+        // Copy all pages from source to merged document
         for (int pageIndex = 0; pageIndex < sourceDocument.pages.count; pageIndex++) {
           final PdfPage sourcePage = sourceDocument.pages[pageIndex];
-          
-          // Add new page to merged document (inherits landscape orientation)
           final PdfPage newPage = mergedDocument.pages.add();
-          PdfGraphics graphics = newPage.graphics;
-          
-          // Create template from source page
           final PdfTemplate template = sourcePage.createTemplate();
           
-          print('📏 Source page size: ${sourcePage.size.width} x ${sourcePage.size.height}');
-          print('📏 Template size: ${template.size.width} x ${template.size.height}');
-          print('📏 New page size: ${newPage.size.width} x ${newPage.size.height}');
-          
-          // CRITICAL FIX: Detect if template is wrongly oriented
-          final bool needsRotation = template.size.width < template.size.height;
-          
-          if (needsRotation) {
-            print('🔄 Applying rotation fix for PDF ${i + 1}, page ${pageIndex + 1}');
-            
-            // Save graphics state
-            graphics.save();
-            
-            // Apply rotation transformation to fix orientation
-            // Move to top-right corner and rotate 90 degrees
-            graphics.translateTransform(newPage.size.width, 0);
-            graphics.rotateTransform(90);
-            
-            // Draw template with swapped dimensions
-            graphics.drawPdfTemplate(
-              template, 
-              const Offset(0, 0),
-              Size(template.size.height, template.size.width)
-            );
-            
-            // Restore graphics state
-            graphics.restore();
-          } else {
-            // Template is already correct orientation
-            print('✅ Template already landscape for PDF ${i + 1}, page ${pageIndex + 1}');
-            graphics.drawPdfTemplate(template, const Offset(0, 0), template.size);
-          }
+          // Draw template directly - no rotation needed since template is already landscape
+          newPage.graphics.drawPdfTemplate(template, const Offset(0, 0), template.size);
         }
         
         sourceDocument.dispose();
-        print('📄 Successfully merged PDF ${i + 1}/${individualPdfs.length}');
       } catch (e) {
         print('⚠️ Failed to merge PDF ${i + 1}: $e');
         rethrow;
@@ -399,11 +410,11 @@ class PdfService {
     final List<int> mergedBytes = await mergedDocument.save();
     mergedDocument.dispose();
     
-    print('✅ Successfully merged ${individualPdfs.length} PDFs with PROPER LANDSCAPE ORIENTATION');
+    print('✅ Successfully merged ${individualPdfs.length} PDFs');
     return Uint8List.fromList(mergedBytes);
   }
   
-  /// Generate A4 portrait summary page with all workcard data using Excel names
+  /// Generate A4 landscape summary page with 90-degree rotated text (portrait layout)
   static Future<Uint8List> _generateSummaryPage({
     required String supervisor,
     required String shift,
@@ -414,71 +425,92 @@ class PdfService {
   }) async {
     print('📄 Generating summary page...');
     
-    // Create new PDF document with A4 portrait orientation
+    // Create new PDF document with A4 PORTRAIT orientation
     final PdfDocument document = PdfDocument();
     document.pageSettings.orientation = PdfPageOrientation.portrait;
     document.pageSettings.size = PdfPageSize.a4;
-    document.pageSettings.margins.all = 20;
+    document.pageSettings.margins.all = 15; // Slightly more margins
     
     // Add page
     final PdfPage page = document.pages.add();
     PdfGraphics graphics = page.graphics;
     
-    // Create fonts
+    // Work directly in portrait coordinate system
+    final double pageHeight = page.size.height - 30; // Available height 
+    final double pageWidth = page.size.width - 30;  // Available width
+    
+    // Create fonts - all same size except title
     final PdfFont titleFont = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
-    final PdfFont headerFont = PdfStandardFont(PdfFontFamily.helvetica, 12, style: PdfFontStyle.bold);
-    final PdfFont normalFont = PdfStandardFont(PdfFontFamily.helvetica, 10);
+    final PdfFont professionFont = PdfStandardFont(PdfFontFamily.helvetica, 10, style: PdfFontStyle.bold);
+    final PdfFont normalFont = PdfStandardFont(PdfFontFamily.helvetica, 10); // Headers and names use normal font
     final PdfFont smallFont = PdfStandardFont(PdfFontFamily.helvetica, 8);
     
     // Create brushes
     final PdfBrush blackBrush = PdfSolidBrush(PdfColor(0, 0, 0));
-    final PdfBrush blueBrush = PdfSolidBrush(PdfColor(0, 0, 255));
     final PdfBrush grayBrush = PdfSolidBrush(PdfColor(100, 100, 100));
     
-    double yPosition = 20;
-    final double pageWidth = page.size.width - 40; // Account for margins
+    double yPosition = 0;
     
-    // Title
+    // Draw professional grey header bar
+    final PdfBrush headerBrush = PdfSolidBrush(PdfColor(220, 220, 220)); // Light grey
+    graphics.drawRectangle(
+      brush: headerBrush,
+      bounds: Rect.fromLTWH(0, 0, page.size.width, 50),
+    );
+    
+    // Add header title
+    yPosition = 15;
     graphics.drawString(
-      'Yhteenveto',
+      'Vuoronvaihto yhteenveto',
       titleFont,
       brush: blackBrush,
-      bounds: Rect.fromLTWH(20, yPosition, pageWidth, 20),
+      bounds: Rect.fromLTWH(15, yPosition, pageWidth, 20),
     );
-    yPosition += 30;
     
-    // Basic information
-    graphics.drawString('Päivämäärä: $date', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
-    graphics.drawString('Työnjohtaja: $supervisor', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(250, yPosition, 200, 15));
-    yPosition += 20;
-    graphics.drawString('Vuoro: $shift', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, 200, 15));
-    yPosition += 30;
+
     
-    // Shift Notes (instead of Global Notice)
-    final activeShiftNotes = shiftNotes.where((note) => note.isNotEmpty).toList();
-    if (activeShiftNotes.isNotEmpty) {
-      graphics.drawString('Huomioita seuraavalle vuorolle:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
-      yPosition += 18;
-      
-      for (final note in activeShiftNotes) {
-        graphics.drawString('• $note', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
-        yPosition += 18;
-      }
-      yPosition += 20;
+    yPosition = 60; // Start content after header
+    
+    // Calculate total manpower (PDF workers only)
+    int totalManpower = 0;
+    for (final card in professionCards) {
+      if (card.pdfName1.isNotEmpty) totalManpower++;
+      if (card.pdfName2.isNotEmpty) totalManpower++;
     }
     
-    // Workers (simplified structure - no separate "Workers by Profession" section)
-    graphics.drawString('Työntekijät:', headerFont, brush: blackBrush, bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15));
-    yPosition += 20;
+    // Basic information
+    graphics.drawString('Päivämäärä: $date', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(15, yPosition, 200, 15));
+    graphics.drawString('Työnjohtaja: $supervisor', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(220, yPosition, 200, 15));
+    yPosition += 17;
+    graphics.drawString('Vuoro: $shift', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(15, yPosition, 200, 15));
+    graphics.drawString('Vahvuus: $totalManpower', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(220, yPosition, 200, 15));
+    yPosition += 22; // Better spacing
     
-    // Profession cards with their workers
+    // Shift Notes
+    final activeShiftNotes = shiftNotes.where((note) => note.isNotEmpty).toList();
+    if (activeShiftNotes.isNotEmpty) {
+      graphics.drawString('Huomioita seuraavalle vuorolle:', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15));
+      yPosition += 17;
+      
+      for (final note in activeShiftNotes) {
+        graphics.drawString('• $note', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15));
+        yPosition += 17;
+      }
+      yPosition += 18;
+    }
+    
+    // Workers section
+    graphics.drawString('Työntekijät:', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15));
+    yPosition += 17;
+    
+    // Profession cards with their workers, tasks, and new fields
     for (final card in professionCards) {
       // Check if we need a new page
-      if (yPosition > page.size.height - 150) {
-        // Add new page
+      if (yPosition > pageHeight - 100) { // Better threshold for portrait pages
+        // Start new page
         final newPage = document.pages.add();
         graphics = newPage.graphics;
-        yPosition = 20;
+        yPosition = 15; // Consistent top padding for new pages
       }
       
       if (card.professionName.isNotEmpty || card.pdfName1.isNotEmpty || card.pdfName2.isNotEmpty) {
@@ -487,34 +519,100 @@ class PdfService {
             .where((name) => name.isNotEmpty)
             .join(', ');
         
-        // Profession name with workers on the same line
+        // Bold profession name with normal workers names on the same line
         final professionText = card.professionName.isEmpty ? 'Määrittelemätön' : card.professionName;
-        final displayText = pdfWorkers.isNotEmpty ? '$professionText: $pdfWorkers' : professionText;
         
+        // Draw profession name in bold
         graphics.drawString(
-          '• $displayText',
-          normalFont,
+          '• $professionText',
+          professionFont, // Bold font for profession only
           brush: blackBrush,
-          bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+          bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
         );
+        
+        // Draw worker names in normal font if any
+        if (pdfWorkers.isNotEmpty) {
+          final professionWidth = professionFont.measureString('• $professionText').width;
+          graphics.drawString(
+            ': $pdfWorkers',
+            normalFont, // Normal font for worker names
+            brush: blackBrush,
+            bounds: Rect.fromLTWH(15 + professionWidth, yPosition, pageWidth - professionWidth, 15),
+          );
+        }
         yPosition += 15;
         
-        // Tasks (without header, directly listed)
+        // Tasks section with header
         final activeTasks = card.tasks.where((task) => task.task.isNotEmpty).toList();
         if (activeTasks.isNotEmpty) {
+          graphics.drawString(
+            '    Tehtävät:',
+            normalFont, // Same size as profession text, not bold
+            brush: blackBrush,
+            bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+          );
+          yPosition += 12;
+          
           for (final task in activeTasks) {
             final taskText = task.taskNotice.isNotEmpty ? '${task.task} - ${task.taskNotice}' : task.task;
             graphics.drawString(
-              '    - $taskText',
+              '      - $taskText',
               smallFont,
               brush: grayBrush,
-              bounds: Rect.fromLTWH(20, yPosition, pageWidth, 15),
+              bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
             );
-            yPosition += 12;
+            yPosition += 11; // More spacing between tasks
           }
+          yPosition += 3; // Extra space after tasks section
         }
         
-        yPosition += 8; // Space between cards
+        // Work Site Conditions section with header
+        final activeWorkSiteConditions = card.workSiteConditions.where((condition) => condition.isNotEmpty).toList();
+        if (activeWorkSiteConditions.isNotEmpty) {
+          graphics.drawString(
+            '    Työkohteen tämänhetkinen tila:',
+            normalFont, // Same size as profession text, not bold
+            brush: blackBrush,
+            bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+          );
+          yPosition += 12;
+          
+          for (final condition in activeWorkSiteConditions) {
+            graphics.drawString(
+              '      - $condition',
+              smallFont,
+              brush: grayBrush,
+              bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+            );
+            yPosition += 11;
+          }
+          yPosition += 3; // Extra space after section
+        }
+        
+        // Supervisor Risk Notes section with header
+        final activeSupervisorRiskNotes = card.supervisorRiskNotes.where((note) => note.isNotEmpty).toList();
+        if (activeSupervisorRiskNotes.isNotEmpty) {
+          graphics.drawString(
+            '    Työnjohtajan huomiot riskeistä:',
+            normalFont, // Same size as profession text, not bold
+            brush: blackBrush,
+            bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+          );
+          yPosition += 12;
+          
+          for (final note in activeSupervisorRiskNotes) {
+            graphics.drawString(
+              '      - $note',
+              smallFont,
+              brush: grayBrush,
+              bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+            );
+            yPosition += 11;
+          }
+          yPosition += 3; // Extra space after section
+        }
+        
+        yPosition += 12; // Better space between cards
       }
     }
     
@@ -522,7 +620,7 @@ class PdfService {
     final List<int> pdfBytes = await document.save();
     document.dispose();
     
-    print('✅ Summary page generated successfully');
+    print('✅ Summary page generated successfully in portrait orientation');
     return Uint8List.fromList(pdfBytes);
   }
   
@@ -566,7 +664,7 @@ class PdfService {
       final PdfPage summaryPage = summaryDocument.pages[i];
       final PdfTemplate template = summaryPage.createTemplate();
       
-      // Add new page to main document with A4 portrait orientation
+      // Add new page to main document with LANDSCAPE orientation (same as work cards)
       final PdfPage newPage = mainDocument.pages.add();
       PdfGraphics graphics = newPage.graphics;
       graphics.drawPdfTemplate(template, const Offset(0, 0), template.size);
@@ -578,7 +676,7 @@ class PdfService {
     mainDocument.dispose();
     summaryDocument.dispose();
     
-    print('✅ Summary page added to main document');
+    print('✅ Summary page added to main document with LANDSCAPE orientation');
     return Uint8List.fromList(finalBytes);
   }
   
@@ -642,6 +740,28 @@ class PdfService {
     final sanitizedShift = shift.replaceAll(' ', '_');
     
     final filename = 'Työkortti_${sanitizedSupervisor}_${sanitizedShift}_$sanitizedDate.pdf';
+    
+    // Platform-specific saving (same as Excel)
+    if (kIsWeb) {
+      // 🌐 WEB: Download file via browser
+      await _downloadFileWeb(pdfBytes, filename);
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      // 📱 MOBILE: Share file
+      await _shareFileMobile(pdfBytes, filename);
+    } else {
+      // 🖥️ DESKTOP: Save to file system
+      await _saveFileDesktop(pdfBytes, filename);
+    }
+  }
+
+  /// Save summary PDF file with specific naming
+  static Future<void> _saveSummaryPdfFile(Uint8List pdfBytes, String supervisor, String shift, String date) async {
+    // Create filename: "Yhteenveto_supervisor_shift_date.pdf"
+    final sanitizedDate = date.replaceAll('.', '-').replaceAll('/', '-');
+    final sanitizedSupervisor = supervisor.replaceAll(' ', '_');
+    final sanitizedShift = shift.replaceAll(' ', '_');
+    
+    final filename = 'Yhteenveto_${sanitizedSupervisor}_${sanitizedShift}_$sanitizedDate.pdf';
     
     // Platform-specific saving (same as Excel)
     if (kIsWeb) {

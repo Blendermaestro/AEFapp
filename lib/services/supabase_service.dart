@@ -273,4 +273,149 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .eq('user_id', currentUser!.id) ?? Stream.empty();
   }
+  
+  /// Reset all user data (delete everything for current user)
+  static Future<void> resetUserData() async {
+    if (!isLoggedIn) {
+      print('SupabaseService: Not logged in, cannot reset user data');
+      return;
+    }
+
+    final currentUser = client?.auth.currentUser;
+    if (currentUser == null) {
+      print('SupabaseService: No current user');
+      return;
+    }
+
+    try {
+      print('SupabaseService: Resetting all data for user ${currentUser.id}');
+      
+      // Delete all work cards for this user
+      await client
+          ?.from('work_cards')
+          .delete()
+          .eq('user_id', currentUser.id);
+      print('SupabaseService: Deleted all work cards');
+      
+      // Delete all user settings for this user
+      await client
+          ?.from('user_settings')
+          .delete()
+          .eq('user_id', currentUser.id);
+      print('SupabaseService: Deleted all user settings');
+      
+      print('SupabaseService: Successfully reset all user data');
+    } catch (e) {
+      print('SupabaseService: Error resetting user data: $e');
+      rethrow;
+    }
+  }
+  
+  /// Sign in anonymously (no email required)
+  static Future<AuthResponse> signInAnonymously() async {
+    if (!_isAvailable || client == null) {
+      throw Exception('Cloud sync is currently unavailable. Please try again later.');
+    }
+    
+    try {
+      print('SupabaseService: Signing in anonymously');
+      return await client!.auth.signInAnonymously();
+    } catch (e) {
+      print('SupabaseService: Anonymous sign in failed: $e');
+      if (e.toString().contains('401')) {
+        throw Exception('Authentication service is temporarily unavailable. Please try again later.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Create user account with username only (admin function)
+  static Future<AuthResponse> createUserAccount({
+    required String username,
+    required String password,
+  }) async {
+    if (!_isAvailable || client == null) {
+      throw Exception('Cloud sync is currently unavailable. Please try again later.');
+    }
+    
+    try {
+      print('SupabaseService: Creating user account for username: $username');
+      
+      // Use a fake email format for Supabase compatibility
+      final fakeEmail = '$username@workcard.local';
+      
+      final response = await client!.auth.signUp(
+        email: fakeEmail,
+        password: password,
+        data: {
+          'username': username,
+          'is_email_user': false,
+          'display_name': username,
+        },
+      );
+      
+      return response;
+    } catch (e) {
+      print('SupabaseService: User creation failed: $e');
+      if (e.toString().contains('401')) {
+        throw Exception('Authentication service is temporarily unavailable. Please try again later.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Sign in with username and password
+  static Future<AuthResponse> signInWithUsername({
+    required String username,
+    required String password,
+  }) async {
+    if (!_isAvailable || client == null) {
+      throw Exception('Cloud sync is currently unavailable. Please try again later.');
+    }
+    
+    try {
+      print('SupabaseService: Signing in with username: $username');
+      
+      // Convert username to fake email format
+      final fakeEmail = '$username@workcard.local';
+      
+      return await client!.auth.signInWithPassword(
+        email: fakeEmail,
+        password: password,
+      );
+    } catch (e) {
+      print('SupabaseService: Username sign in failed: $e');
+      if (e.toString().contains('401')) {
+        throw Exception('Authentication service is temporarily unavailable. Please try again later.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get current user's username
+  static String? get currentUsername {
+    final user = client?.auth.currentUser;
+    if (user == null) return null;
+    
+    // Try to get username from user metadata
+    final username = user.userMetadata?['username'] as String?;
+    if (username != null) return username;
+    
+    // Fall back to extracting from email if it's in our fake format
+    final email = user.email;
+    if (email != null && email.endsWith('@workcard.local')) {
+      return email.replaceAll('@workcard.local', '');
+    }
+    
+    return email; // Return email if it's a real email user
+  }
+
+  /// Check if current user is an email-based user or username-based
+  static bool get isEmailUser {
+    final user = client?.auth.currentUser;
+    if (user == null) return false;
+    
+    final isEmailUser = user.userMetadata?['is_email_user'] as bool?;
+    return isEmailUser ?? true; // Default to email user for backwards compatibility
+  }
 } 

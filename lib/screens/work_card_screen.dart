@@ -48,6 +48,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   
   // Shift notes (for PDF summary only, not Excel)
   List<String> shiftNotes = [''];
+  List<TextEditingController> _shiftNoteControllers = [];
   
   // Add flag to prevent syncing during initial load
   bool _isInitialLoad = true;
@@ -61,11 +62,27 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
+    // Initialize shift note controllers
+    _initializeShiftNoteControllers();
+    
     // Load saved data
     _loadData().then((_) {
       // Mark initial load as complete
       _isInitialLoad = false;
     });
+  }
+
+  void _initializeShiftNoteControllers() {
+    // Dispose existing controllers
+    for (var controller in _shiftNoteControllers) {
+      controller.dispose();
+    }
+    _shiftNoteControllers.clear();
+    
+    // Create controllers for current shift notes
+    for (int i = 0; i < shiftNotes.length; i++) {
+      _shiftNoteControllers.add(TextEditingController(text: shiftNotes[i]));
+    }
   }
 
   Future<void> _loadData() async {
@@ -128,6 +145,9 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           comments = [''];
           extraWork = [''];
         }
+        
+        // Reinitialize controllers after loading from cloud
+        _initializeShiftNoteControllers();
         
         print('Final professionCards count AFTER cloud load: ${professionCards.length}');
         print('Final cards: ${professionCards.map((c) => c.professionName).toList()}');
@@ -198,6 +218,9 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     } else {
       shiftNotes = [''];
     }
+    
+    // Reinitialize controllers after loading data
+    _initializeShiftNoteControllers();
     
     print('Final professionCards count AFTER local load: ${professionCards.length}');
     print('Final cards: ${professionCards.map((c) => c.professionName).toList()}');
@@ -361,6 +384,12 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   void dispose() {
     _tabController.dispose();
     _saveDebounceTimer?.cancel();
+    
+    // Dispose shift note controllers
+    for (var controller in _shiftNoteControllers) {
+      controller.dispose();
+    }
+    
     super.dispose();
   }
 
@@ -414,6 +443,12 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'Export PDF',
           ),
+          // Summary Export
+          IconButton(
+            onPressed: _exportSummary,
+            icon: const Icon(Icons.summarize),
+            tooltip: 'Export Summary',
+          ),
           // Excel Export
           IconButton(
             onPressed: _exportExcel,
@@ -425,8 +460,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             icon: Icon(SupabaseService.isLoggedIn ? Icons.logout : Icons.person),
             onPressed: () {
               if (SupabaseService.isLoggedIn) {
-                SupabaseService.signOut();
-                setState(() {}); // Re-render to update UI
+                _confirmLogout();
               } else {
                 widget.onShowAuth();
               }
@@ -638,6 +672,39 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     }
   }
 
+  void _exportSummary() async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Luodaan yhteenveto-PDF...')),
+      );
+
+      await PdfService.exportSummaryOnly(
+        supervisor: pdfSupervisor,
+        shift: pdfShift,
+        date: pdfDate,
+        professionCards: professionCards,
+        shiftNotes: shiftNotes,
+      );
+
+      // Success feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Yhteenveto-PDF luotu onnistuneesti!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Error feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Virhe yhteenveto-PDF:n luonnissa: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _exportExcel() async {
     try {
       // Show loading indicator
@@ -703,12 +770,15 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     int lastNonEmpty = _getLastNonEmptyShiftNoteIndex();
     int fieldsToShow = (lastNonEmpty + 2).clamp(1, 100); // Show at least 1, at most 100
 
+    // Ensure we have enough shift notes and controllers
+    while (shiftNotes.length < fieldsToShow) {
+      shiftNotes.add('');
+    }
+    while (_shiftNoteControllers.length < fieldsToShow) {
+      _shiftNoteControllers.add(TextEditingController(text: shiftNotes[_shiftNoteControllers.length]));
+    }
+
     for (int i = 0; i < fieldsToShow; i++) {
-      // Ensure shiftNotes list is long enough
-      while (shiftNotes.length <= i) {
-        shiftNotes.add('');
-      }
-      
       fields.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
@@ -716,11 +786,8 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             children: [
               Expanded(
                 child: TextField(
-                  key: ValueKey('shift_note_$i'), // Add unique key
-                  controller: TextEditingController(text: shiftNotes[i])
-                    ..selection = TextSelection.collapsed(offset: shiftNotes[i].length), // Fix cursor position
+                  controller: _shiftNoteControllers[i],
                   onChanged: (value) => _updateShiftNote(i, value),
-                  textDirection: TextDirection.ltr, // Ensure left-to-right text direction
                   decoration: InputDecoration(
                     hintText: i == 0 ? 'Huomioita seuraavalle vuorolle (ei tule exceliin)' : 'Huomio ${i + 1}',
                     border: const OutlineInputBorder(),
@@ -771,6 +838,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     if (shiftNotes.length < 100) {
       setState(() {
         shiftNotes.add('');
+        _shiftNoteControllers.add(TextEditingController(text: ''));
         _saveShiftNotes();
       });
     }
@@ -836,6 +904,33 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           backgroundColor: Colors.green,
         ),
       );
+    }
+  }
+
+  void _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Kirjaudu ulos'),
+          content: const Text('Haluatko varmasti kirjautua ulos?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Peruuta'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Kirjaudu ulos'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout == true) {
+      SupabaseService.signOut();
+      widget.onShowAuth(); // Go back to auth screen
     }
   }
 
@@ -965,6 +1060,9 @@ class ProfessionCardData {
   List<TaskData> tasks;
   String equipment;
   String equipmentLocation;
+  // New dynamic fields for work site conditions and supervisor risk notes
+  List<String> workSiteConditions;
+  List<String> supervisorRiskNotes;
 
   ProfessionCardData({
     this.professionName = '',
@@ -975,9 +1073,17 @@ class ProfessionCardData {
     this.tasks = const [],
     this.equipment = '',
     this.equipmentLocation = '',
+    this.workSiteConditions = const [],
+    this.supervisorRiskNotes = const [],
   }) {
     if (tasks.isEmpty) {
       tasks = [TaskData()];
+    }
+    if (workSiteConditions.isEmpty) {
+      workSiteConditions = [''];
+    }
+    if (supervisorRiskNotes.isEmpty) {
+      supervisorRiskNotes = [''];
     }
   }
 
@@ -992,6 +1098,8 @@ class ProfessionCardData {
       'tasks': tasks.map((task) => task.toJson()).toList(),
       'equipment': equipment,
       'equipmentLocation': equipmentLocation,
+      'workSiteConditions': workSiteConditions,
+      'supervisorRiskNotes': supervisorRiskNotes,
     };
   }
 
@@ -1007,6 +1115,8 @@ class ProfessionCardData {
           .toList() ?? [TaskData()],
       equipment: json['equipment'] ?? '',
       equipmentLocation: json['equipmentLocation'] ?? '',
+      workSiteConditions: List<String>.from(json['workSiteConditions'] ?? ['']),
+      supervisorRiskNotes: List<String>.from(json['supervisorRiskNotes'] ?? ['']),
     );
   }
 }

@@ -29,6 +29,8 @@ class _ProfessionCardState extends State<ProfessionCard> {
   late TextEditingController _locationController;
   List<TextEditingController> _taskControllers = [];
   List<TextEditingController> _taskNoticeControllers = [];
+  List<TextEditingController> _workSiteConditionControllers = [];
+  List<TextEditingController> _supervisorRiskNoteControllers = [];
 
   @override
   void initState() {
@@ -54,12 +56,24 @@ class _ProfessionCardState extends State<ProfessionCard> {
     for (var controller in _taskNoticeControllers) {
       controller.dispose();
     }
+    for (var controller in _workSiteConditionControllers) {
+      controller.dispose();
+    }
+    for (var controller in _supervisorRiskNoteControllers) {
+      controller.dispose();
+    }
 
     _taskControllers = widget.data.tasks
         .map((task) => TextEditingController(text: task.task))
         .toList();
     _taskNoticeControllers = widget.data.tasks
         .map((task) => TextEditingController(text: task.taskNotice))
+        .toList();
+    _workSiteConditionControllers = widget.data.workSiteConditions
+        .map((condition) => TextEditingController(text: condition))
+        .toList();
+    _supervisorRiskNoteControllers = widget.data.supervisorRiskNotes
+        .map((note) => TextEditingController(text: note))
         .toList();
   }
 
@@ -69,7 +83,9 @@ class _ProfessionCardState extends State<ProfessionCard> {
     
     // Only update controllers if tab changed or data structure changed
     if (oldWidget.isPDFTab != widget.isPDFTab || 
-        oldWidget.data.tasks.length != widget.data.tasks.length) {
+        oldWidget.data.tasks.length != widget.data.tasks.length ||
+        oldWidget.data.workSiteConditions.length != widget.data.workSiteConditions.length ||
+        oldWidget.data.supervisorRiskNotes.length != widget.data.supervisorRiskNotes.length) {
       _initializeControllers();
     } else {
       // Update individual controllers only if values actually changed
@@ -89,6 +105,20 @@ class _ProfessionCardState extends State<ProfessionCard> {
         }
         if (i < _taskNoticeControllers.length) {
           _updateControllerIfNeeded(_taskNoticeControllers[i], widget.data.tasks[i].taskNotice);
+        }
+      }
+      
+      // Update work site condition controllers
+      for (int i = 0; i < widget.data.workSiteConditions.length; i++) {
+        if (i < _workSiteConditionControllers.length) {
+          _updateControllerIfNeeded(_workSiteConditionControllers[i], widget.data.workSiteConditions[i]);
+        }
+      }
+      
+      // Update supervisor risk note controllers
+      for (int i = 0; i < widget.data.supervisorRiskNotes.length; i++) {
+        if (i < _supervisorRiskNoteControllers.length) {
+          _updateControllerIfNeeded(_supervisorRiskNoteControllers[i], widget.data.supervisorRiskNotes[i]);
         }
       }
     }
@@ -115,6 +145,12 @@ class _ProfessionCardState extends State<ProfessionCard> {
       controller.dispose();
     }
     for (var controller in _taskNoticeControllers) {
+      controller.dispose();
+    }
+    for (var controller in _workSiteConditionControllers) {
+      controller.dispose();
+    }
+    for (var controller in _supervisorRiskNoteControllers) {
       controller.dispose();
     }
     super.dispose();
@@ -194,6 +230,24 @@ class _ProfessionCardState extends State<ProfessionCard> {
             style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
           ),
           ..._getTasksDisplayVertical(),
+        ],
+        
+        if (_hasAnyWorkSiteConditions()) ...[
+          const SizedBox(height: 4),
+          const Text(
+            'Työkohteen tämänhetkinen tila:',
+            style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
+          ),
+          ..._getWorkSiteConditionsDisplayVertical(),
+        ],
+        
+        if (_hasAnySupervisorRiskNotes()) ...[
+          const SizedBox(height: 4),
+          const Text(
+            'Työnjohtajan huomiot riskeistä:',
+            style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
+          ),
+          ..._getSupervisorRiskNotesDisplayVertical(),
         ],
         
         if (!widget.isPDFTab && (widget.data.equipment.isNotEmpty || widget.data.equipmentLocation.isNotEmpty)) ...[
@@ -302,6 +356,14 @@ class _ProfessionCardState extends State<ProfessionCard> {
         _buildTasksSection(),
         const SizedBox(height: 8),
         
+        // Work Site Conditions section
+        _buildWorkSiteConditionsSection(),
+        const SizedBox(height: 8),
+        
+        // Supervisor Risk Notes section
+        _buildSupervisorRiskNotesSection(),
+        const SizedBox(height: 8),
+        
         // Equipment section - only show on Excel tab
         if (!widget.isPDFTab) _buildEquipmentSection(),
       ],
@@ -360,6 +422,34 @@ class _ProfessionCardState extends State<ProfessionCard> {
         .where((task) => task.task.isNotEmpty)
         .map((task) => Text(
           task.taskNotice.isNotEmpty ? '${task.task} - ${task.taskNotice}' : task.task,
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ))
+        .toList();
+  }
+
+  bool _hasAnyWorkSiteConditions() {
+    return widget.data.workSiteConditions.any((condition) => condition.isNotEmpty);
+  }
+
+  List<Widget> _getWorkSiteConditionsDisplayVertical() {
+    return widget.data.workSiteConditions
+        .where((condition) => condition.isNotEmpty)
+        .map((condition) => Text(
+          condition,
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ))
+        .toList();
+  }
+
+  bool _hasAnySupervisorRiskNotes() {
+    return widget.data.supervisorRiskNotes.any((note) => note.isNotEmpty);
+  }
+
+  List<Widget> _getSupervisorRiskNotesDisplayVertical() {
+    return widget.data.supervisorRiskNotes
+        .where((note) => note.isNotEmpty)
+        .map((note) => Text(
+          note,
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ))
         .toList();
@@ -525,6 +615,8 @@ class _ProfessionCardState extends State<ProfessionCard> {
       tasks: widget.data.tasks,
       equipment: widget.data.equipment,
       equipmentLocation: widget.data.equipmentLocation,
+      workSiteConditions: widget.data.workSiteConditions,
+      supervisorRiskNotes: widget.data.supervisorRiskNotes,
     );
     widget.onDataChanged(newData);
   }
@@ -539,6 +631,8 @@ class _ProfessionCardState extends State<ProfessionCard> {
       tasks: widget.data.tasks,
       equipment: widget.data.equipment,
       equipmentLocation: widget.data.equipmentLocation,
+      workSiteConditions: widget.data.workSiteConditions,
+      supervisorRiskNotes: widget.data.supervisorRiskNotes,
     );
     widget.onDataChanged(newData);
   }
@@ -555,6 +649,8 @@ class _ProfessionCardState extends State<ProfessionCard> {
       tasks: newTasks,
       equipment: widget.data.equipment,
       equipmentLocation: widget.data.equipmentLocation,
+      workSiteConditions: widget.data.workSiteConditions,
+      supervisorRiskNotes: widget.data.supervisorRiskNotes,
     );
     widget.onDataChanged(newData);
   }
@@ -569,6 +665,178 @@ class _ProfessionCardState extends State<ProfessionCard> {
       tasks: widget.data.tasks,
       equipment: equipment,
       equipmentLocation: location,
+      workSiteConditions: widget.data.workSiteConditions,
+      supervisorRiskNotes: widget.data.supervisorRiskNotes,
+    );
+    widget.onDataChanged(newData);
+  }
+
+  Widget _buildWorkSiteConditionsSection() {
+    // Auto-expanding logic: find last non-empty condition
+    int lastNonEmpty = -1;
+    for (int i = 0; i < widget.data.workSiteConditions.length; i++) {
+      if (widget.data.workSiteConditions[i].isNotEmpty) {
+        lastNonEmpty = i;
+      }
+    }
+    
+    // Show (lastNonEmpty + 2) fields, minimum 1, maximum 3
+    int fieldsToShow = (lastNonEmpty + 2).clamp(1, 3);
+    
+    // Ensure we have enough conditions in the data structure
+    while (widget.data.workSiteConditions.length < fieldsToShow) {
+      _addWorkSiteConditionToData();
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Työkohteen tämänhetkinen tila',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        // Show only the calculated number of fields
+        ...List.generate(fieldsToShow, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: TextField(
+              key: ValueKey('work_site_condition_$index'),
+              controller: index < _workSiteConditionControllers.length ? _workSiteConditionControllers[index] : null,
+              onChanged: (value) {
+                _updateWorkSiteCondition(index, value);
+                // Auto-expand when typing in the last visible field
+                if (index == fieldsToShow - 1 && value.isNotEmpty && fieldsToShow < 3) {
+                  setState(() {}); // Trigger rebuild to show next field
+                }
+              },
+              textDirection: TextDirection.ltr, // Ensure left-to-right text direction
+              decoration: InputDecoration(
+                hintText: 'Työkohteen tila ${index + 1}',
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                isDense: true,
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // Helper method to add work site condition to data structure
+  void _addWorkSiteConditionToData() {
+    if (widget.data.workSiteConditions.length < 3) {
+      widget.data.workSiteConditions.add('');
+      // Add corresponding controller
+      _workSiteConditionControllers.add(TextEditingController());
+    }
+  }
+
+  void _updateWorkSiteCondition(int index, String value) {
+    // Ensure list is large enough
+    while (widget.data.workSiteConditions.length <= index) {
+      widget.data.workSiteConditions.add('');
+    }
+    
+    final newWorkSiteConditions = List<String>.from(widget.data.workSiteConditions);
+    newWorkSiteConditions[index] = value;
+    
+    final newData = ProfessionCardData(
+      professionName: widget.data.professionName,
+      pdfName1: widget.data.pdfName1,
+      pdfName2: widget.data.pdfName2,
+      excelName1: widget.data.excelName1,
+      excelName2: widget.data.excelName2,
+      tasks: widget.data.tasks,
+      equipment: widget.data.equipment,
+      equipmentLocation: widget.data.equipmentLocation,
+      workSiteConditions: newWorkSiteConditions,
+      supervisorRiskNotes: widget.data.supervisorRiskNotes,
+    );
+    widget.onDataChanged(newData);
+  }
+
+  Widget _buildSupervisorRiskNotesSection() {
+    // Auto-expanding logic: find last non-empty note
+    int lastNonEmpty = -1;
+    for (int i = 0; i < widget.data.supervisorRiskNotes.length; i++) {
+      if (widget.data.supervisorRiskNotes[i].isNotEmpty) {
+        lastNonEmpty = i;
+      }
+    }
+    
+    // Show (lastNonEmpty + 2) fields, minimum 1, maximum 3
+    int fieldsToShow = (lastNonEmpty + 2).clamp(1, 3);
+    
+    // Ensure we have enough notes in the data structure
+    while (widget.data.supervisorRiskNotes.length < fieldsToShow) {
+      _addSupervisorRiskNoteToData();
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Työnjohtajan huomiot riskeistä',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        // Show only the calculated number of fields
+        ...List.generate(fieldsToShow, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: TextField(
+              key: ValueKey('supervisor_risk_note_$index'),
+              controller: index < _supervisorRiskNoteControllers.length ? _supervisorRiskNoteControllers[index] : null,
+              onChanged: (value) {
+                _updateSupervisorRiskNote(index, value);
+                // Auto-expand when typing in the last visible field
+                if (index == fieldsToShow - 1 && value.isNotEmpty && fieldsToShow < 3) {
+                  setState(() {}); // Trigger rebuild to show next field
+                }
+              },
+              textDirection: TextDirection.ltr, // Ensure left-to-right text direction
+              decoration: InputDecoration(
+                hintText: 'Riskihuomio ${index + 1}',
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                isDense: true,
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // Helper method to add supervisor risk note to data structure
+  void _addSupervisorRiskNoteToData() {
+    if (widget.data.supervisorRiskNotes.length < 3) {
+      widget.data.supervisorRiskNotes.add('');
+      // Add corresponding controller
+      _supervisorRiskNoteControllers.add(TextEditingController());
+    }
+  }
+
+  void _updateSupervisorRiskNote(int index, String value) {
+    // Ensure list is large enough
+    while (widget.data.supervisorRiskNotes.length <= index) {
+      widget.data.supervisorRiskNotes.add('');
+    }
+    
+    final newSupervisorRiskNotes = List<String>.from(widget.data.supervisorRiskNotes);
+    newSupervisorRiskNotes[index] = value;
+    
+    final newData = ProfessionCardData(
+      professionName: widget.data.professionName,
+      pdfName1: widget.data.pdfName1,
+      pdfName2: widget.data.pdfName2,
+      excelName1: widget.data.excelName1,
+      excelName2: widget.data.excelName2,
+      tasks: widget.data.tasks,
+      equipment: widget.data.equipment,
+      equipmentLocation: widget.data.equipmentLocation,
+      workSiteConditions: widget.data.workSiteConditions,
+      supervisorRiskNotes: newSupervisorRiskNotes,
     );
     widget.onDataChanged(newData);
   }
