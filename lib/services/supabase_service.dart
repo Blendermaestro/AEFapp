@@ -166,6 +166,8 @@ class SupabaseService {
           'tasks': card.tasks.map((task) => task.toJson()).toList(),
           'equipment': card.equipment,
           'equipment_location': card.equipmentLocation,
+          'work_site_conditions': card.workSiteConditions,
+          'supervisor_risk_notes': card.supervisorRiskNotes,
         }).toList();
         
         print('SupabaseService: Inserting ${cardsData.length} new cards');
@@ -206,6 +208,8 @@ class SupabaseService {
             .toList() ?? [TaskData()],
         equipment: data['equipment'] ?? '',
         equipmentLocation: data['equipment_location'] ?? '',
+        workSiteConditions: List<String>.from(data['work_site_conditions'] ?? ['']),
+        supervisorRiskNotes: List<String>.from(data['supervisor_risk_notes'] ?? ['']),
       );
     }).toList();
   }
