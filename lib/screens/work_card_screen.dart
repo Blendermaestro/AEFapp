@@ -409,14 +409,20 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             color: Colors.orange.shade700,
           ),
           const SizedBox(width: 8), // Add spacing between clear and save buttons
-          // Manual Save button
+          // Manual Save button (always visible, disabled when not logged in)
           IconButton(
-            onPressed: _manualSave,
+            onPressed: SupabaseService.isLoggedIn ? _manualSave : null,
             icon: Icon(
               Icons.cloud_upload,
-              color: _isSaving ? Colors.grey : Colors.blue.shade700,
+              color: !SupabaseService.isLoggedIn 
+                  ? Colors.grey.shade400
+                  : _isSaving 
+                      ? Colors.grey 
+                      : Colors.blue.shade700,
             ),
-            tooltip: 'Tallenna pilvipalveluun',
+            tooltip: SupabaseService.isLoggedIn 
+                ? 'Tallenna pilvipalveluun' 
+                : 'Kirjaudu sisään tallentaaksesi',
           ),
           const SizedBox(width: 8), // Add spacing between save and reset buttons
           // Reset Account button (only show if logged in)
