@@ -8,6 +8,7 @@ class InfoInputRow extends StatefulWidget {
   final String shift;
   final List<ProfessionCardData> professionCards;
   final bool isPDFTab;
+  final int? tabIndex;
   final ValueChanged<String> onSupervisorChanged;
   final ValueChanged<String> onDateChanged;
   final ValueChanged<String> onShiftChanged;
@@ -19,6 +20,7 @@ class InfoInputRow extends StatefulWidget {
     required this.shift,
     required this.professionCards,
     required this.isPDFTab,
+    this.tabIndex,
     required this.onSupervisorChanged,
     required this.onDateChanged,
     required this.onShiftChanged,
@@ -61,9 +63,31 @@ class _InfoInputRowState extends State<InfoInputRow> {
     int count = 0;
     for (final card in widget.professionCards) {
       if (widget.isPDFTab) {
-        if (card.pdfName1.isNotEmpty) count++;
-        if (card.pdfName2.isNotEmpty) count++;
+        // Count based on specific PDF tab
+        String name1, name2;
+        switch (widget.tabIndex) {
+          case 0: // PDF tab
+            name1 = card.pdfName1;
+            name2 = card.pdfName2;
+            break;
+          case 1: // PDF2 tab
+            name1 = card.pdf2Name1;
+            name2 = card.pdf2Name2;
+            break;
+          case 2: // PDF3 tab
+            name1 = card.pdf3Name1;
+            name2 = card.pdf3Name2;
+            break;
+          default:
+            name1 = card.pdfName1;
+            name2 = card.pdfName2;
+            break;
+        }
+        
+        if (name1.isNotEmpty) count++;
+        if (name2.isNotEmpty) count++;
       } else {
+        // Excel tab
         if (card.excelName1.isNotEmpty) count++;
         if (card.excelName2.isNotEmpty) count++;
       }
