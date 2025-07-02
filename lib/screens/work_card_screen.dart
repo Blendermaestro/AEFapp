@@ -480,6 +480,12 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           ],
         ),
         actions: [
+          // Info button
+          IconButton(
+            onPressed: _showUserGuide,
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Käyttöohje',
+          ),
           // Manual Save button (always visible, disabled when not logged in)
           IconButton(
             onPressed: SupabaseService.isLoggedIn ? _manualSave : null,
@@ -1306,6 +1312,117 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     } else {
       print('Skipping save - initial load: $_isInitialLoad, logged in: ${SupabaseService.isLoggedIn}');
     }
+  }
+
+  void _showUserGuide() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.help_outline, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Käyttöohje'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Sovelluksessa on 4 välilehteä. Jokaisella välilehdellä on omat:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 12),
+                const Text('• Asentajat ja työnjohtaja'),
+                const Text('• Päivämäärä'),
+                const Text('• Vuoro'),
+                const Text('• Vahvuus (henkilömäärä)'),
+                const SizedBox(height: 16),
+                const Text(
+                  'Nämä vaihtelevat välilehdittäin.',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+                const SizedBox(height: 16),
+                
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: const Text(
+                    'Tehtävät ovat samat kaikissa välilehdissä. Jos muokkaat tehtävää yhdessä, se päivittyy muihinkin.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                const Text(
+                  'Excelissä on pari lisäkenttää, jotka näkyvät vain Excelissä. Lisäksi Excel-välilehdeltä löytyy ajoneuvot ja niiden sijainnit.',
+                ),
+                
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Huomiot:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('• "Huomio seuraavalle vuorolle" näkyy vain Yhteenveto-PDF:ssä'),
+                      const Text('• "Yleinen huomio" näkyy kaikissa työkorteissa'),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                const Text(
+                  'Välilehdillä on ammattinimikkeitä. Kaikki saman nimikkeen asentajat saavat samat tehtävät työkorttiin. Korttien määrä määräytyy nimien perusteella – tyhjät jätetään pois.',
+                ),
+                
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: const Text(
+                    'Vahvuus-sarakkeessa näkyy automaattisesti montako nimeä on annettu vuoroon.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                const Text(
+                  'Jos olet aina vain yhdessä vuorossa, riittää että käytät yhtä PDF-välilehteä. Voit halutessasi täyttää toisen välilehden seuraavaa vuoroa varten, jotta oman vastavuoron nimet eivät katoa.',
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Sulje'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
