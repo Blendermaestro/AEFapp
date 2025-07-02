@@ -238,13 +238,13 @@ class SupabaseService {
         'pdf_supervisor': settings['pdf_supervisor'] ?? '',
         'pdf_date': settings['pdf_date'] ?? '',
         'pdf_shift': settings['pdf_shift'] ?? '',
-        // TEMPORARILY DISABLED - PDF Tab 2 & 3 (uncomment after running SQL migration)
-        // 'pdf2_supervisor': settings['pdf2_supervisor'] ?? '',
-        // 'pdf2_date': settings['pdf2_date'] ?? '',
-        // 'pdf2_shift': settings['pdf2_shift'] ?? '',
-        // 'pdf3_supervisor': settings['pdf3_supervisor'] ?? '',
-        // 'pdf3_date': settings['pdf3_date'] ?? '',
-        // 'pdf3_shift': settings['pdf3_shift'] ?? '',
+        // PDF Tab 2 & 3
+        'pdf2_supervisor': settings['pdf2_supervisor'] ?? '',
+        'pdf2_date': settings['pdf2_date'] ?? '',
+        'pdf2_shift': settings['pdf2_shift'] ?? '',
+        'pdf3_supervisor': settings['pdf3_supervisor'] ?? '',
+        'pdf3_date': settings['pdf3_date'] ?? '',
+        'pdf3_shift': settings['pdf3_shift'] ?? '',
         // Excel Tab
         'excel_supervisor': settings['excel_supervisor'] ?? '',
         'excel_date': settings['excel_date'] ?? '',
@@ -253,9 +253,9 @@ class SupabaseService {
         'global_notice': settings['global_notice'] ?? '',
         // Shift notes for each PDF tab
         'shift_notes': settings['shift_notes'] ?? [],
-        // TEMPORARILY DISABLED - shift_notes2 & 3 (uncomment after running SQL migration)
-        // 'shift_notes2': settings['shift_notes2'] ?? [],
-        // 'shift_notes3': settings['shift_notes3'] ?? [],
+        // Shift notes for PDF2 & PDF3
+        'shift_notes2': settings['shift_notes2'] ?? [],
+        'shift_notes3': settings['shift_notes3'] ?? [],
         // Excel specific
         'comments': settings['comments'] ?? [],
         'extra_work': settings['extra_work'] ?? [],

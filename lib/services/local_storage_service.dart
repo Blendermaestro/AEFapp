@@ -79,6 +79,68 @@ class LocalStorageService {
     return prefs.getString('excel_shift') ?? '';
   }
 
+  // PDF2 tab fields
+  static Future<void> savePdf2Supervisor(String supervisor) async {
+    final prefs = await _prefs;
+    await prefs.setString('pdf2_supervisor', supervisor);
+  }
+
+  static Future<String> loadPdf2Supervisor() async {
+    final prefs = await _prefs;
+    return prefs.getString('pdf2_supervisor') ?? '';
+  }
+
+  static Future<void> savePdf2Date(String date) async {
+    final prefs = await _prefs;
+    await prefs.setString('pdf2_date', date);
+  }
+
+  static Future<String> loadPdf2Date() async {
+    final prefs = await _prefs;
+    return prefs.getString('pdf2_date') ?? '';
+  }
+
+  static Future<void> savePdf2Shift(String shift) async {
+    final prefs = await _prefs;
+    await prefs.setString('pdf2_shift', shift);
+  }
+
+  static Future<String> loadPdf2Shift() async {
+    final prefs = await _prefs;
+    return prefs.getString('pdf2_shift') ?? '';
+  }
+
+  // PDF3 tab fields
+  static Future<void> savePdf3Supervisor(String supervisor) async {
+    final prefs = await _prefs;
+    await prefs.setString('pdf3_supervisor', supervisor);
+  }
+
+  static Future<String> loadPdf3Supervisor() async {
+    final prefs = await _prefs;
+    return prefs.getString('pdf3_supervisor') ?? '';
+  }
+
+  static Future<void> savePdf3Date(String date) async {
+    final prefs = await _prefs;
+    await prefs.setString('pdf3_date', date);
+  }
+
+  static Future<String> loadPdf3Date() async {
+    final prefs = await _prefs;
+    return prefs.getString('pdf3_date') ?? '';
+  }
+
+  static Future<void> savePdf3Shift(String shift) async {
+    final prefs = await _prefs;
+    await prefs.setString('pdf3_shift', shift);
+  }
+
+  static Future<String> loadPdf3Shift() async {
+    final prefs = await _prefs;
+    return prefs.getString('pdf3_shift') ?? '';
+  }
+
   // Legacy methods for backward compatibility (keep for now)
   static Future<void> saveSupervisor(String supervisor) async {
     final prefs = await _prefs;
@@ -225,6 +287,30 @@ class LocalStorageService {
   static Future<List<String>> loadShiftNotes() async {
     final prefs = await _prefs;
     return prefs.getStringList(_shiftNotesKey) ?? [''];
+  }
+
+  // Save shift notes for PDF2
+  static Future<void> saveShiftNotes2(List<String> shiftNotes) async {
+    final prefs = await _prefs;
+    await prefs.setStringList('shift_notes2', shiftNotes);
+  }
+
+  // Load shift notes for PDF2
+  static Future<List<String>> loadShiftNotes2() async {
+    final prefs = await _prefs;
+    return prefs.getStringList('shift_notes2') ?? [''];
+  }
+
+  // Save shift notes for PDF3
+  static Future<void> saveShiftNotes3(List<String> shiftNotes) async {
+    final prefs = await _prefs;
+    await prefs.setStringList('shift_notes3', shiftNotes);
+  }
+
+  // Load shift notes for PDF3
+  static Future<List<String>> loadShiftNotes3() async {
+    final prefs = await _prefs;
+    return prefs.getStringList('shift_notes3') ?? [''];
   }
 
   // Clear all data

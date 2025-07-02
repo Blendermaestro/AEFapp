@@ -7,6 +7,7 @@ import '../widgets/profession_card.dart';
 import '../widgets/excel_specific_fields.dart';
 import '../screens/settings_screen.dart';
 import '../services/supabase_service.dart';
+import '../services/local_storage_service.dart';
 import '../services/excel_service.dart';
 import '../services/pdf_service.dart';
 
@@ -157,14 +158,14 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         pdfDate = cloudSettings['pdf_date'] ?? '';
         pdfShift = cloudSettings['pdf_shift'] ?? '';
         
-        // TODO: Uncomment these after running database migration
-        // pdf2Supervisor = cloudSettings['pdf2_supervisor'] ?? '';
-        // pdf2Date = cloudSettings['pdf2_date'] ?? '';
-        // pdf2Shift = cloudSettings['pdf2_shift'] ?? '';
+        // Load PDF2/PDF3 fields from cloud
+        pdf2Supervisor = cloudSettings['pdf2_supervisor'] ?? '';
+        pdf2Date = cloudSettings['pdf2_date'] ?? '';
+        pdf2Shift = cloudSettings['pdf2_shift'] ?? '';
         
-        // pdf3Supervisor = cloudSettings['pdf3_supervisor'] ?? '';
-        // pdf3Date = cloudSettings['pdf3_date'] ?? '';
-        // pdf3Shift = cloudSettings['pdf3_shift'] ?? '';
+        pdf3Supervisor = cloudSettings['pdf3_supervisor'] ?? '';
+        pdf3Date = cloudSettings['pdf3_date'] ?? '';
+        pdf3Shift = cloudSettings['pdf3_shift'] ?? '';
         
         excelSupervisor = cloudSettings['excel_supervisor'] ?? '';
         excelDate = cloudSettings['excel_date'] ?? '';
@@ -172,16 +173,15 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         globalNotice = cloudSettings['global_notice'] ?? '';
         
         shiftNotes = List<String>.from(cloudSettings['shift_notes'] ?? ['']);
-        // TODO: Uncomment these after running database migration
-        // shiftNotes2 = List<String>.from(cloudSettings['shift_notes2'] ?? ['']);
-        // shiftNotes3 = List<String>.from(cloudSettings['shift_notes3'] ?? ['']);
+        // Load PDF2/PDF3 shift notes from cloud
+        shiftNotes2 = List<String>.from(cloudSettings['shift_notes2'] ?? ['']);
+        shiftNotes3 = List<String>.from(cloudSettings['shift_notes3'] ?? ['']);
         
         comments = List<String>.from(cloudSettings['comments'] ?? ['']);
         extraWork = List<String>.from(cloudSettings['extra_work'] ?? ['']);
       } else {
         // Initialize empty settings for first time users
         shiftNotes = [''];
-        // TODO: Initialize these after running database migration
         shiftNotes2 = [''];
         shiftNotes3 = [''];
         comments = [''];
@@ -352,21 +352,19 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         'pdf_supervisor': pdfSupervisor,
         'pdf_date': pdfDate,
         'pdf_shift': pdfShift,
-        // TODO: Uncomment these after running database migration
-        // 'pdf2_supervisor': pdf2Supervisor,
-        // 'pdf2_date': pdf2Date,
-        // 'pdf2_shift': pdf2Shift,
-        // 'pdf3_supervisor': pdf3Supervisor,
-        // 'pdf3_date': pdf3Date,
-        // 'pdf3_shift': pdf3Shift,
+        'pdf2_supervisor': pdf2Supervisor,
+        'pdf2_date': pdf2Date,
+        'pdf2_shift': pdf2Shift,
+        'pdf3_supervisor': pdf3Supervisor,
+        'pdf3_date': pdf3Date,
+        'pdf3_shift': pdf3Shift,
         'excel_supervisor': excelSupervisor,
         'excel_date': excelDate,
         'excel_shift': excelShift,
         'global_notice': globalNotice,
         'shift_notes': shiftNotes,
-        // TODO: Uncomment these after running database migration
-        // 'shift_notes2': shiftNotes2,
-        // 'shift_notes3': shiftNotes3,
+        'shift_notes2': shiftNotes2,
+        'shift_notes3': shiftNotes3,
         'comments': comments,
         'extra_work': extraWork,
       };
