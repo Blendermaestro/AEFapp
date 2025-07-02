@@ -201,6 +201,10 @@ class SupabaseService {
         professionName: data['profession_name'] ?? '',
         pdfName1: data['pdf_name1'] ?? '',
         pdfName2: data['pdf_name2'] ?? '',
+        pdf2Name1: data['pdf2_name1'] ?? '', // NEW
+        pdf2Name2: data['pdf2_name2'] ?? '', // NEW
+        pdf3Name1: data['pdf3_name1'] ?? '', // NEW
+        pdf3Name2: data['pdf3_name2'] ?? '', // NEW
         excelName1: data['excel_name1'] ?? '',
         excelName2: data['excel_name2'] ?? '',
         tasks: (data['tasks'] as List<dynamic>?)
@@ -214,7 +218,7 @@ class SupabaseService {
     }).toList();
   }
   
-  /// Save user settings to cloud
+  /// Save user settings to cloud (UPDATED FOR PDF2/PDF3)
   static Future<void> saveUserSettings(Map<String, dynamic> settings) async {
     if (!isLoggedIn) {
       print('SupabaseService: Not logged in, cannot save user settings');
@@ -230,14 +234,29 @@ class SupabaseService {
 
       final userSettings = {
         'user_id': currentUser.id,
+        // PDF Tab 1
         'pdf_supervisor': settings['pdf_supervisor'] ?? '',
         'pdf_date': settings['pdf_date'] ?? '',
         'pdf_shift': settings['pdf_shift'] ?? '',
+        // TEMPORARILY DISABLED - PDF Tab 2 & 3 (uncomment after running SQL migration)
+        // 'pdf2_supervisor': settings['pdf2_supervisor'] ?? '',
+        // 'pdf2_date': settings['pdf2_date'] ?? '',
+        // 'pdf2_shift': settings['pdf2_shift'] ?? '',
+        // 'pdf3_supervisor': settings['pdf3_supervisor'] ?? '',
+        // 'pdf3_date': settings['pdf3_date'] ?? '',
+        // 'pdf3_shift': settings['pdf3_shift'] ?? '',
+        // Excel Tab
         'excel_supervisor': settings['excel_supervisor'] ?? '',
         'excel_date': settings['excel_date'] ?? '',
         'excel_shift': settings['excel_shift'] ?? '',
+        // Shared settings
         'global_notice': settings['global_notice'] ?? '',
+        // Shift notes for each PDF tab
         'shift_notes': settings['shift_notes'] ?? [],
+        // TEMPORARILY DISABLED - shift_notes2 & 3 (uncomment after running SQL migration)
+        // 'shift_notes2': settings['shift_notes2'] ?? [],
+        // 'shift_notes3': settings['shift_notes3'] ?? [],
+        // Excel specific
         'comments': settings['comments'] ?? [],
         'extra_work': settings['extra_work'] ?? [],
         'updated_at': DateTime.now().toIso8601String(),

@@ -28,16 +28,24 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   
-  // Tab-specific data
+  // Tab-specific data - SEPARATE FOR EACH PDF TAB
   String pdfSupervisor = '';
   String pdfDate = '';
   String pdfShift = '';
+  
+  String pdf2Supervisor = '';
+  String pdf2Date = '';
+  String pdf2Shift = '';
+  
+  String pdf3Supervisor = '';
+  String pdf3Date = '';
+  String pdf3Shift = '';
   
   String excelSupervisor = '';
   String excelDate = '';
   String excelShift = '';
   
-  // Shared data
+  // Shared data - SAME ACROSS ALL TABS
   String globalNotice = '';
   List<ProfessionCardData> professionCards = [];
   
@@ -45,9 +53,13 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   List<String> comments = [''];
   List<String> extraWork = [''];
   
-  // Shift notes (for PDF summary only, not Excel)
+  // Shift notes (for PDF summary only, not Excel) - SEPARATE FOR EACH PDF TAB
   List<String> shiftNotes = [''];
+  List<String> shiftNotes2 = [''];
+  List<String> shiftNotes3 = [''];
   List<TextEditingController> _shiftNoteControllers = [];
+  List<TextEditingController> _shiftNoteControllers2 = [];
+  List<TextEditingController> _shiftNoteControllers3 = [];
   
   // Add flag to prevent syncing during initial load
   bool _isInitialLoad = true;
@@ -59,9 +71,9 @@ class _WorkCardScreenState extends State<WorkCardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this); // CHANGED FROM 2 TO 4 TABS
     
-    // Initialize shift note controllers
+    // Initialize shift note controllers for all PDF tabs
     _initializeShiftNoteControllers();
     
     // Load saved data
@@ -76,11 +88,25 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     for (var controller in _shiftNoteControllers) {
       controller.dispose();
     }
+    for (var controller in _shiftNoteControllers2) {
+      controller.dispose();
+    }
+    for (var controller in _shiftNoteControllers3) {
+      controller.dispose();
+    }
     _shiftNoteControllers.clear();
+    _shiftNoteControllers2.clear();
+    _shiftNoteControllers3.clear();
     
-    // Create controllers for current shift notes
+    // Create controllers for current shift notes for all PDF tabs
     for (int i = 0; i < shiftNotes.length; i++) {
       _shiftNoteControllers.add(TextEditingController(text: shiftNotes[i]));
+    }
+    for (int i = 0; i < shiftNotes2.length; i++) {
+      _shiftNoteControllers2.add(TextEditingController(text: shiftNotes2[i]));
+    }
+    for (int i = 0; i < shiftNotes3.length; i++) {
+      _shiftNoteControllers3.add(TextEditingController(text: shiftNotes3[i]));
     }
   }
 
@@ -130,16 +156,34 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         pdfSupervisor = cloudSettings['pdf_supervisor'] ?? '';
         pdfDate = cloudSettings['pdf_date'] ?? '';
         pdfShift = cloudSettings['pdf_shift'] ?? '';
+        
+        // TODO: Uncomment these after running database migration
+        // pdf2Supervisor = cloudSettings['pdf2_supervisor'] ?? '';
+        // pdf2Date = cloudSettings['pdf2_date'] ?? '';
+        // pdf2Shift = cloudSettings['pdf2_shift'] ?? '';
+        
+        // pdf3Supervisor = cloudSettings['pdf3_supervisor'] ?? '';
+        // pdf3Date = cloudSettings['pdf3_date'] ?? '';
+        // pdf3Shift = cloudSettings['pdf3_shift'] ?? '';
+        
         excelSupervisor = cloudSettings['excel_supervisor'] ?? '';
         excelDate = cloudSettings['excel_date'] ?? '';
         excelShift = cloudSettings['excel_shift'] ?? '';
         globalNotice = cloudSettings['global_notice'] ?? '';
+        
         shiftNotes = List<String>.from(cloudSettings['shift_notes'] ?? ['']);
+        // TODO: Uncomment these after running database migration
+        // shiftNotes2 = List<String>.from(cloudSettings['shift_notes2'] ?? ['']);
+        // shiftNotes3 = List<String>.from(cloudSettings['shift_notes3'] ?? ['']);
+        
         comments = List<String>.from(cloudSettings['comments'] ?? ['']);
         extraWork = List<String>.from(cloudSettings['extra_work'] ?? ['']);
       } else {
         // Initialize empty settings for first time users
         shiftNotes = [''];
+        // TODO: Initialize these after running database migration
+        shiftNotes2 = [''];
+        shiftNotes3 = [''];
         comments = [''];
         extraWork = [''];
       }
@@ -166,12 +210,21 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     }
   }
 
-  // Auto-save methods (cloud-only)
-  void _saveSupervisor(String value, bool isPDF) {
-    if (isPDF) {
-      pdfSupervisor = value;
-    } else {
-      excelSupervisor = value;
+  // Auto-save methods - UPDATED FOR MULTIPLE PDF TABS
+  void _saveSupervisor(String value, int tabIndex) {
+    switch (tabIndex) {
+      case 0: // PDF tab
+        pdfSupervisor = value;
+        break;
+      case 1: // PDF2 tab
+        pdf2Supervisor = value;
+        break;
+      case 2: // PDF3 tab
+        pdf3Supervisor = value;
+        break;
+      case 3: // Excel tab
+        excelSupervisor = value;
+        break;
     }
     
     // Auto-save to cloud if not during initial load
@@ -180,11 +233,20 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     }
   }
 
-  void _saveDate(String value, bool isPDF) {
-    if (isPDF) {
-      pdfDate = value;
-    } else {
-      excelDate = value;
+  void _saveDate(String value, int tabIndex) {
+    switch (tabIndex) {
+      case 0: // PDF tab
+        pdfDate = value;
+        break;
+      case 1: // PDF2 tab
+        pdf2Date = value;
+        break;
+      case 2: // PDF3 tab
+        pdf3Date = value;
+        break;
+      case 3: // Excel tab
+        excelDate = value;
+        break;
     }
     
     // Auto-save to cloud if not during initial load
@@ -193,11 +255,20 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     }
   }
 
-  void _saveShift(String value, bool isPDF) {
-    if (isPDF) {
-      pdfShift = value;
-    } else {
-      excelShift = value;
+  void _saveShift(String value, int tabIndex) {
+    switch (tabIndex) {
+      case 0: // PDF tab
+        pdfShift = value;
+        break;
+      case 1: // PDF2 tab
+        pdf2Shift = value;
+        break;
+      case 2: // PDF3 tab
+        pdf3Shift = value;
+        break;
+      case 3: // Excel tab
+        excelShift = value;
+        break;
     }
     
     // Auto-save to cloud if not during initial load
@@ -241,7 +312,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     }
   }
 
-  void _saveShiftNotes() {
+  void _saveShiftNotes(int tabIndex) {
     // Auto-save to cloud if not during initial load
     if (!_isInitialLoad) {
       _debouncedSyncToCloud();
@@ -281,11 +352,21 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         'pdf_supervisor': pdfSupervisor,
         'pdf_date': pdfDate,
         'pdf_shift': pdfShift,
+        // TODO: Uncomment these after running database migration
+        // 'pdf2_supervisor': pdf2Supervisor,
+        // 'pdf2_date': pdf2Date,
+        // 'pdf2_shift': pdf2Shift,
+        // 'pdf3_supervisor': pdf3Supervisor,
+        // 'pdf3_date': pdf3Date,
+        // 'pdf3_shift': pdf3Shift,
         'excel_supervisor': excelSupervisor,
         'excel_date': excelDate,
         'excel_shift': excelShift,
         'global_notice': globalNotice,
         'shift_notes': shiftNotes,
+        // TODO: Uncomment these after running database migration
+        // 'shift_notes2': shiftNotes2,
+        // 'shift_notes3': shiftNotes3,
         'comments': comments,
         'extra_work': extraWork,
       };
@@ -401,14 +482,6 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           ],
         ),
         actions: [
-          // Clear All button (moved to left side)
-          IconButton(
-            onPressed: _confirmClearAll,
-            icon: const Icon(Icons.clear_all),
-            tooltip: 'Clear All Tasks & Equipment',
-            color: Colors.orange.shade700,
-          ),
-          const SizedBox(width: 8), // Add spacing between clear and save buttons
           // Manual Save button (always visible, disabled when not logged in)
           IconButton(
             onPressed: SupabaseService.isLoggedIn ? _manualSave : null,
@@ -424,34 +497,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
                 ? 'Tallenna pilvipalveluun' 
                 : 'Kirjaudu sisään tallentaaksesi',
           ),
-          const SizedBox(width: 8), // Add spacing between save and reset buttons
-          // Reset Account button (only show if logged in)
-          if (SupabaseService.isLoggedIn)
-            IconButton(
-              onPressed: _confirmResetAccount,
-              icon: const Icon(Icons.delete_forever),
-              tooltip: 'Reset Account Data',
-              color: Colors.red.shade800,
-            ),
           const SizedBox(width: 8),
-          // PDF Export
-          IconButton(
-            onPressed: _exportPDF,
-            icon: const Icon(Icons.picture_as_pdf),
-            tooltip: 'Export PDF',
-          ),
-          // Summary Export
-          IconButton(
-            onPressed: _exportSummary,
-            icon: const Icon(Icons.summarize),
-            tooltip: 'Export Summary',
-          ),
-          // Excel Export
-          IconButton(
-            onPressed: _exportExcel,
-            icon: const Icon(Icons.table_chart),
-            tooltip: 'Export Excel',
-          ),
           // Authentication button
           IconButton(
             icon: Icon(SupabaseService.isLoggedIn ? Icons.logout : Icons.person),
@@ -474,6 +520,8 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           controller: _tabController,
           tabs: const [
             Tab(text: 'PDF'),
+            Tab(text: 'PDF2'),
+            Tab(text: 'PDF3'),
             Tab(text: 'Excel'),
           ],
         ),
@@ -496,9 +544,31 @@ class _WorkCardScreenState extends State<WorkCardScreen>
                       shift: pdfShift,
                       professionCards: professionCards,
                       isPDFTab: true,
-                      onSupervisorChanged: (value) => setState(() => _saveSupervisor(value, true)),
-                      onDateChanged: (value) => setState(() => _saveDate(value, true)),
-                      onShiftChanged: (value) => setState(() => _saveShift(value, true)),
+                      onSupervisorChanged: (value) => setState(() => _saveSupervisor(value, 0)),
+                      onDateChanged: (value) => setState(() => _saveDate(value, 0)),
+                      onShiftChanged: (value) => setState(() => _saveShift(value, 0)),
+                    ),
+                    // PDF2 Tab content
+                    InfoInputRow(
+                      supervisor: pdf2Supervisor,
+                      date: pdf2Date,
+                      shift: pdf2Shift,
+                      professionCards: professionCards,
+                      isPDFTab: true,
+                      onSupervisorChanged: (value) => setState(() => _saveSupervisor(value, 1)),
+                      onDateChanged: (value) => setState(() => _saveDate(value, 1)),
+                      onShiftChanged: (value) => setState(() => _saveShift(value, 1)),
+                    ),
+                    // PDF3 Tab content
+                    InfoInputRow(
+                      supervisor: pdf3Supervisor,
+                      date: pdf3Date,
+                      shift: pdf3Shift,
+                      professionCards: professionCards,
+                      isPDFTab: true,
+                      onSupervisorChanged: (value) => setState(() => _saveSupervisor(value, 2)),
+                      onDateChanged: (value) => setState(() => _saveDate(value, 2)),
+                      onShiftChanged: (value) => setState(() => _saveShift(value, 2)),
                     ),
                     // Excel Tab content
                     InfoInputRow(
@@ -507,9 +577,9 @@ class _WorkCardScreenState extends State<WorkCardScreen>
                       shift: excelShift,
                       professionCards: professionCards,
                       isPDFTab: false,
-                      onSupervisorChanged: (value) => setState(() => _saveSupervisor(value, false)),
-                      onDateChanged: (value) => setState(() => _saveDate(value, false)),
-                      onShiftChanged: (value) => setState(() => _saveShift(value, false)),
+                      onSupervisorChanged: (value) => setState(() => _saveSupervisor(value, 3)),
+                      onDateChanged: (value) => setState(() => _saveDate(value, 3)),
+                      onShiftChanged: (value) => setState(() => _saveShift(value, 3)),
                     ),
                   ],
                 ),
@@ -520,10 +590,14 @@ class _WorkCardScreenState extends State<WorkCardScreen>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // PDF Tab - Profession cards with global notice scrolling above
-                    _buildProfessionCardsList(isPDFTab: true),
-                    // Excel Tab - Profession cards with excel fields scrolling above
-                    _buildProfessionCardsList(isPDFTab: false),
+                    // PDF Tab - with print buttons
+                    _buildPDFTabContent(tabIndex: 0),
+                    // PDF2 Tab - with print buttons
+                    _buildPDFTabContent(tabIndex: 1),
+                    // PDF3 Tab - with print buttons  
+                    _buildPDFTabContent(tabIndex: 2),
+                    // Excel Tab - with export button
+                    _buildExcelTabContent(),
                   ],
                 ),
               ),
@@ -539,7 +613,84 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     );
   }
 
-  Widget _buildProfessionCardsList({required bool isPDFTab}) {
+  Widget _buildPDFTabContent({required int tabIndex}) {
+    return Column(
+      children: [
+        // Print buttons for this PDF tab
+        Container(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 180,
+                child: ElevatedButton.icon(
+                  onPressed: () => _exportPDFForTab(tabIndex),
+                  icon: const Icon(Icons.picture_as_pdf, size: 18),
+                  label: const Text('Työkortti'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 180,
+                child: ElevatedButton.icon(
+                  onPressed: () => _exportSummaryForTab(tabIndex),
+                  icon: const Icon(Icons.summarize, size: 18),
+                  label: const Text('Yhteenveto'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Profession cards list
+        Expanded(
+          child: _buildProfessionCardsList(isPDFTab: true, tabIndex: tabIndex),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExcelTabContent() {
+    return Column(
+      children: [
+        // Excel export button
+        Container(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 180,
+                child: ElevatedButton.icon(
+                  onPressed: _exportExcel,
+                  icon: const Icon(Icons.table_chart, size: 18),
+                  label: const Text('Tulosta Excel'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Profession cards list with Excel fields
+        Expanded(
+          child: _buildProfessionCardsList(isPDFTab: false),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfessionCardsList({required bool isPDFTab, int? tabIndex}) {
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: professionCards.length + 1, // +1 for the header fields
@@ -547,7 +698,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         // First item: show the specific fields for each tab
         if (index == 0) {
           if (isPDFTab) {
-            // PDF tab: Global Notice Field + Shift Notes
+            // PDF tab: Global Notice Field + Shift Notes for this specific tab
             return Column(
               children: [
                 Padding(
@@ -559,7 +710,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
                 ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _buildShiftNotesSection(),
+                  child: _buildShiftNotesSection(tabIndex: tabIndex!),
                 ),
               ],
             );
@@ -590,6 +741,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           child: ProfessionCard(
             data: professionCards[cardIndex],
             isPDFTab: isPDFTab,
+            tabIndex: tabIndex,
             onDataChanged: (newData) {
               setState(() {
                 professionCards[cardIndex] = newData;
@@ -635,26 +787,54 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     return count;
   }
 
-  void _exportPDF() async {
+  // Export methods for specific tabs
+  void _exportPDFForTab(int tabIndex) async {
+    String supervisor, shift, date;
+    List<String> currentShiftNotes;
+    
+    switch (tabIndex) {
+      case 0:
+        supervisor = pdfSupervisor;
+        shift = pdfShift;
+        date = pdfDate;
+        currentShiftNotes = shiftNotes;
+        break;
+      case 1:
+        supervisor = pdf2Supervisor;
+        shift = pdf2Shift;
+        date = pdf2Date;
+        currentShiftNotes = shiftNotes2;
+        break;
+      case 2:
+        supervisor = pdf3Supervisor;
+        shift = pdf3Shift;
+        date = pdf3Date;
+        currentShiftNotes = shiftNotes3;
+        break;
+      default:
+        return;
+    }
+
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Luodaan PDF-tiedostoja...')),
+        SnackBar(content: Text('Luodaan PDF${tabIndex == 0 ? '' : tabIndex + 1}-tiedostoja...')),
       );
 
       await PdfService.exportToPdf(
-        pdfSupervisor: pdfSupervisor,
-        pdfShift: pdfShift,
-        pdfDate: pdfDate,
+        pdfSupervisor: supervisor,
+        pdfShift: shift,
+        pdfDate: date,
         globalNotice: globalNotice,
         professionCards: professionCards,
-        shiftNotes: shiftNotes,
+        shiftNotes: currentShiftNotes,
+        pdfTabIndex: tabIndex,
       );
 
       // Success feedback
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PDF-tiedostot luotu onnistuneesti!'),
+        SnackBar(
+          content: Text('PDF${tabIndex == 0 ? '' : tabIndex + 1}-tiedostot luotu onnistuneesti!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -662,32 +842,59 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       // Error feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Virhe PDF-tiedostojen luonnissa: $e'),
+          content: Text('Virhe PDF${tabIndex == 0 ? '' : tabIndex + 1}-tiedostojen luonnissa: $e'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  void _exportSummary() async {
+  void _exportSummaryForTab(int tabIndex) async {
+    String supervisor, shift, date;
+    List<String> currentShiftNotes;
+    
+    switch (tabIndex) {
+      case 0:
+        supervisor = pdfSupervisor;
+        shift = pdfShift;
+        date = pdfDate;
+        currentShiftNotes = shiftNotes;
+        break;
+      case 1:
+        supervisor = pdf2Supervisor;
+        shift = pdf2Shift;
+        date = pdf2Date;
+        currentShiftNotes = shiftNotes2;
+        break;
+      case 2:
+        supervisor = pdf3Supervisor;
+        shift = pdf3Shift;
+        date = pdf3Date;
+        currentShiftNotes = shiftNotes3;
+        break;
+      default:
+        return;
+    }
+
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Luodaan yhteenveto-PDF...')),
+        SnackBar(content: Text('Luodaan yhteenveto-PDF${tabIndex == 0 ? '' : tabIndex + 1}...')),
       );
 
       await PdfService.exportSummaryOnly(
-        supervisor: pdfSupervisor,
-        shift: pdfShift,
-        date: pdfDate,
+        supervisor: supervisor,
+        shift: shift,
+        date: date,
         professionCards: professionCards,
-        shiftNotes: shiftNotes,
+        shiftNotes: currentShiftNotes,
+        pdfTabIndex: tabIndex,
       );
 
       // Success feedback
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Yhteenveto-PDF luotu onnistuneesti!'),
+        SnackBar(
+          content: Text('Yhteenveto-PDF${tabIndex == 0 ? '' : tabIndex + 1} luotu onnistuneesti!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -695,7 +902,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       // Error feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Virhe yhteenveto-PDF:n luonnissa: $e'),
+          content: Text('Virhe yhteenveto-PDF${tabIndex == 0 ? '' : tabIndex + 1}:n luonnissa: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -750,29 +957,51 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     // The focus state will be preserved when returning
   }
 
-  Widget _buildShiftNotesSection() {
+  Widget _buildShiftNotesSection({required int tabIndex}) {
+    List<String> currentShiftNotes;
+    List<TextEditingController> currentControllers;
+    
+    switch (tabIndex) {
+      case 0:
+        currentShiftNotes = shiftNotes;
+        currentControllers = _shiftNoteControllers;
+        break;
+      case 1:
+        currentShiftNotes = shiftNotes2;
+        currentControllers = _shiftNoteControllers2;
+        break;
+      case 2:
+        currentShiftNotes = shiftNotes3;
+        currentControllers = _shiftNoteControllers3;
+        break;
+      default:
+        currentShiftNotes = shiftNotes;
+        currentControllers = _shiftNoteControllers;
+        break;
+    }
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ..._buildShiftNotesFields(),
+          ..._buildShiftNotesFields(tabIndex: tabIndex, shiftNotes: currentShiftNotes, controllers: currentControllers),
         ],
       ),
     );
   }
 
-  List<Widget> _buildShiftNotesFields() {
+  List<Widget> _buildShiftNotesFields({required int tabIndex, required List<String> shiftNotes, required List<TextEditingController> controllers}) {
     List<Widget> fields = [];
-    int lastNonEmpty = _getLastNonEmptyShiftNoteIndex();
-    int fieldsToShow = (lastNonEmpty + 2).clamp(1, 100); // Show at least 1, at most 100
+    int lastNonEmpty = _getLastNonEmptyShiftNoteIndex(shiftNotes);
+    int fieldsToShow = (lastNonEmpty + 2).clamp(1, 100);
 
     // Ensure we have enough shift notes and controllers
     while (shiftNotes.length < fieldsToShow) {
       shiftNotes.add('');
     }
-    while (_shiftNoteControllers.length < fieldsToShow) {
-      _shiftNoteControllers.add(TextEditingController(text: shiftNotes[_shiftNoteControllers.length]));
+    while (controllers.length < fieldsToShow) {
+      controllers.add(TextEditingController(text: shiftNotes[controllers.length]));
     }
 
     for (int i = 0; i < fieldsToShow; i++) {
@@ -783,8 +1012,8 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             children: [
               Expanded(
                 child: TextField(
-                  controller: _shiftNoteControllers[i],
-                  onChanged: (value) => _updateShiftNote(i, value),
+                  controller: controllers[i],
+                  onChanged: (value) => _updateShiftNote(i, value, tabIndex),
                   decoration: InputDecoration(
                     hintText: i == 0 ? 'Huomioita seuraavalle vuorolle (ei tule exceliin)' : 'Huomio ${i + 1}',
                     border: const OutlineInputBorder(),
@@ -795,7 +1024,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
               ),
               if (i == fieldsToShow - 1 && lastNonEmpty < 99)
                 IconButton(
-                  onPressed: _addShiftNote,
+                  onPressed: () => _addShiftNote(tabIndex),
                   icon: const Icon(Icons.add_circle),
                   iconSize: 14,
                   padding: const EdgeInsets.only(left: 4),
@@ -810,7 +1039,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     return fields;
   }
 
-  int _getLastNonEmptyShiftNoteIndex() {
+  int _getLastNonEmptyShiftNoteIndex(List<String> shiftNotes) {
     for (int i = shiftNotes.length - 1; i >= 0; i--) {
       if (shiftNotes[i].isNotEmpty) {
         return i;
@@ -819,24 +1048,64 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     return -1; // All empty
   }
 
-  void _updateShiftNote(int index, String value) {
+  void _updateShiftNote(int index, String value, int tabIndex) {
+    List<String> currentShiftNotes;
+    List<TextEditingController> currentControllers;
+    
+    switch (tabIndex) {
+      case 0:
+        currentShiftNotes = shiftNotes;
+        currentControllers = _shiftNoteControllers;
+        break;
+      case 1:
+        currentShiftNotes = shiftNotes2;
+        currentControllers = _shiftNoteControllers2;
+        break;
+      case 2:
+        currentShiftNotes = shiftNotes3;
+        currentControllers = _shiftNoteControllers3;
+        break;
+      default:
+        return;
+    }
+    
     // Ensure list is large enough
-    while (shiftNotes.length <= index) {
-      shiftNotes.add('');
+    while (currentShiftNotes.length <= index) {
+      currentShiftNotes.add('');
     }
     
     setState(() {
-      shiftNotes[index] = value;
-      _saveShiftNotes();
+      currentShiftNotes[index] = value;
+      _saveShiftNotes(tabIndex);
     });
   }
 
-  void _addShiftNote() {
-    if (shiftNotes.length < 100) {
+  void _addShiftNote(int tabIndex) {
+    List<String> currentShiftNotes;
+    List<TextEditingController> currentControllers;
+    
+    switch (tabIndex) {
+      case 0:
+        currentShiftNotes = shiftNotes;
+        currentControllers = _shiftNoteControllers;
+        break;
+      case 1:
+        currentShiftNotes = shiftNotes2;
+        currentControllers = _shiftNoteControllers2;
+        break;
+      case 2:
+        currentShiftNotes = shiftNotes3;
+        currentControllers = _shiftNoteControllers3;
+        break;
+      default:
+        return;
+    }
+    
+    if (currentShiftNotes.length < 100) {
       setState(() {
-        shiftNotes.add('');
-        _shiftNoteControllers.add(TextEditingController(text: ''));
-        _saveShiftNotes();
+        currentShiftNotes.add('');
+        currentControllers.add(TextEditingController(text: ''));
+        _saveShiftNotes(tabIndex);
       });
     }
   }
@@ -890,7 +1159,6 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         
         // Save all changes
         _saveProfessionCards();
-        _saveShiftNotes();
         _saveExcelFields();
       });
 
@@ -984,11 +1252,19 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           pdfSupervisor = '';
           pdfDate = '';
           pdfShift = '';
+          pdf2Supervisor = '';
+          pdf2Date = '';
+          pdf2Shift = '';
+          pdf3Supervisor = '';
+          pdf3Date = '';
+          pdf3Shift = '';
           excelSupervisor = '';
           excelDate = '';
           excelShift = '';
           globalNotice = '';
           shiftNotes = [''];
+          shiftNotes2 = [''];
+          shiftNotes3 = [''];
           comments = [''];
           extraWork = [''];
         });
@@ -1033,8 +1309,13 @@ class _WorkCardScreenState extends State<WorkCardScreen>
 
 class ProfessionCardData {
   String professionName;
+  // Separate names for each PDF tab
   String pdfName1;
   String pdfName2;
+  String pdf2Name1; // NEW - for PDF2 tab
+  String pdf2Name2; // NEW - for PDF2 tab
+  String pdf3Name1; // NEW - for PDF3 tab
+  String pdf3Name2; // NEW - for PDF3 tab
   String excelName1;
   String excelName2;
   List<TaskData> tasks;
@@ -1048,6 +1329,10 @@ class ProfessionCardData {
     this.professionName = '',
     this.pdfName1 = '',
     this.pdfName2 = '',
+    this.pdf2Name1 = '', // NEW
+    this.pdf2Name2 = '', // NEW
+    this.pdf3Name1 = '', // NEW
+    this.pdf3Name2 = '', // NEW
     this.excelName1 = '',
     this.excelName2 = '',
     this.tasks = const [],
@@ -1073,6 +1358,10 @@ class ProfessionCardData {
       'professionName': professionName,
       'pdfName1': pdfName1,
       'pdfName2': pdfName2,
+      'pdf2Name1': pdf2Name1,
+      'pdf2Name2': pdf2Name2,
+      'pdf3Name1': pdf3Name1,
+      'pdf3Name2': pdf3Name2,
       'excelName1': excelName1,
       'excelName2': excelName2,
       'tasks': tasks.map((task) => task.toJson()).toList(),
@@ -1088,6 +1377,10 @@ class ProfessionCardData {
       professionName: json['professionName'] ?? '',
       pdfName1: json['pdfName1'] ?? '',
       pdfName2: json['pdfName2'] ?? '',
+      pdf2Name1: json['pdf2Name1'] ?? '', // NEW
+      pdf2Name2: json['pdf2Name2'] ?? '', // NEW
+      pdf3Name1: json['pdf3Name1'] ?? '', // NEW
+      pdf3Name2: json['pdf3Name2'] ?? '', // NEW
       excelName1: json['excelName1'] ?? '',
       excelName2: json['excelName2'] ?? '',
       tasks: (json['tasks'] as List<dynamic>?)

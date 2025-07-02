@@ -5,6 +5,7 @@ import 'autocomplete_text_field.dart';
 class ProfessionCard extends StatefulWidget {
   final ProfessionCardData data;
   final bool isPDFTab;
+  final int? tabIndex; // NEW - to differentiate between PDF tabs (0=PDF, 1=PDF2, 2=PDF3, 3=Excel)
   final ValueChanged<ProfessionCardData> onDataChanged;
   final VoidCallback onDelete;
 
@@ -12,6 +13,7 @@ class ProfessionCard extends StatefulWidget {
     super.key,
     required this.data,
     required this.isPDFTab,
+    this.tabIndex,
     required this.onDataChanged,
     required this.onDelete,
   });
@@ -38,14 +40,33 @@ class _ProfessionCardState extends State<ProfessionCard> {
     _initializeControllers();
   }
 
+  // Helper methods to get the correct names based on tab
+  String _getCurrentName1() {
+    if (!widget.isPDFTab) return widget.data.excelName1;
+    
+    switch (widget.tabIndex) {
+      case 0: return widget.data.pdfName1;
+      case 1: return widget.data.pdf2Name1;
+      case 2: return widget.data.pdf3Name1;
+      default: return widget.data.pdfName1;
+    }
+  }
+  
+  String _getCurrentName2() {
+    if (!widget.isPDFTab) return widget.data.excelName2;
+    
+    switch (widget.tabIndex) {
+      case 0: return widget.data.pdfName2;
+      case 1: return widget.data.pdf2Name2;
+      case 2: return widget.data.pdf3Name2;
+      default: return widget.data.pdfName2;
+    }
+  }
+
   void _initializeControllers() {
     _professionController = TextEditingController(text: widget.data.professionName);
-    _name1Controller = TextEditingController(
-      text: widget.isPDFTab ? widget.data.pdfName1 : widget.data.excelName1,
-    );
-    _name2Controller = TextEditingController(
-      text: widget.isPDFTab ? widget.data.pdfName2 : widget.data.excelName2,
-    );
+    _name1Controller = TextEditingController(text: _getCurrentName1());
+    _name2Controller = TextEditingController(text: _getCurrentName2());
     _equipmentController = TextEditingController(text: widget.data.equipment);
     _locationController = TextEditingController(text: widget.data.equipmentLocation);
 
@@ -83,6 +104,7 @@ class _ProfessionCardState extends State<ProfessionCard> {
     
     // Only update controllers if tab changed or data structure changed
     if (oldWidget.isPDFTab != widget.isPDFTab || 
+        oldWidget.tabIndex != widget.tabIndex ||  // ADD THIS LINE - check for tab changes
         oldWidget.data.tasks.length != widget.data.tasks.length ||
         oldWidget.data.workSiteConditions.length != widget.data.workSiteConditions.length ||
         oldWidget.data.supervisorRiskNotes.length != widget.data.supervisorRiskNotes.length) {
@@ -91,10 +113,8 @@ class _ProfessionCardState extends State<ProfessionCard> {
       // Update individual controllers only if values actually changed
       _updateControllerIfNeeded(_professionController, widget.data.professionName);
       
-      final currentName1 = widget.isPDFTab ? widget.data.pdfName1 : widget.data.excelName1;
-      final currentName2 = widget.isPDFTab ? widget.data.pdfName2 : widget.data.excelName2;
-      _updateControllerIfNeeded(_name1Controller, currentName1);
-      _updateControllerIfNeeded(_name2Controller, currentName2);
+      _updateControllerIfNeeded(_name1Controller, _getCurrentName1());
+      _updateControllerIfNeeded(_name2Controller, _getCurrentName2());
       _updateControllerIfNeeded(_equipmentController, widget.data.equipment);
       _updateControllerIfNeeded(_locationController, widget.data.equipmentLocation);
       
@@ -403,7 +423,7 @@ class _ProfessionCardState extends State<ProfessionCard> {
 
   String _getDisplayNames() {
     if (widget.isPDFTab) {
-      return [widget.data.pdfName1, widget.data.pdfName2]
+      return [_getCurrentName1(), _getCurrentName2()]
           .where((name) => name.isNotEmpty)
           .join(', ');
     } else {
@@ -622,12 +642,47 @@ class _ProfessionCardState extends State<ProfessionCard> {
   }
 
   void _updateNames(String name1, String name2) {
+    // Determine which names to update based on tab
+    String pdfName1 = widget.data.pdfName1;
+    String pdfName2 = widget.data.pdfName2;
+    String pdf2Name1 = widget.data.pdf2Name1;
+    String pdf2Name2 = widget.data.pdf2Name2;
+    String pdf3Name1 = widget.data.pdf3Name1;
+    String pdf3Name2 = widget.data.pdf3Name2;
+    String excelName1 = widget.data.excelName1;
+    String excelName2 = widget.data.excelName2;
+    
+    if (widget.isPDFTab) {
+      switch (widget.tabIndex) {
+        case 0: // PDF tab
+          pdfName1 = name1;
+          pdfName2 = name2;
+          break;
+        case 1: // PDF2 tab
+          pdf2Name1 = name1;
+          pdf2Name2 = name2;
+          break;
+        case 2: // PDF3 tab
+          pdf3Name1 = name1;
+          pdf3Name2 = name2;
+          break;
+      }
+    } else {
+      // Excel tab
+      excelName1 = name1;
+      excelName2 = name2;
+    }
+    
     final newData = ProfessionCardData(
       professionName: widget.data.professionName,
-      pdfName1: widget.isPDFTab ? name1 : widget.data.pdfName1,
-      pdfName2: widget.isPDFTab ? name2 : widget.data.pdfName2,
-      excelName1: !widget.isPDFTab ? name1 : widget.data.excelName1,
-      excelName2: !widget.isPDFTab ? name2 : widget.data.excelName2,
+      pdfName1: pdfName1,
+      pdfName2: pdfName2,
+      pdf2Name1: pdf2Name1,
+      pdf2Name2: pdf2Name2,
+      pdf3Name1: pdf3Name1,
+      pdf3Name2: pdf3Name2,
+      excelName1: excelName1,
+      excelName2: excelName2,
       tasks: widget.data.tasks,
       equipment: widget.data.equipment,
       equipmentLocation: widget.data.equipmentLocation,
@@ -644,6 +699,10 @@ class _ProfessionCardState extends State<ProfessionCard> {
       professionName: widget.data.professionName,
       pdfName1: widget.data.pdfName1,
       pdfName2: widget.data.pdfName2,
+      pdf2Name1: widget.data.pdf2Name1,
+      pdf2Name2: widget.data.pdf2Name2,
+      pdf3Name1: widget.data.pdf3Name1,
+      pdf3Name2: widget.data.pdf3Name2,
       excelName1: widget.data.excelName1,
       excelName2: widget.data.excelName2,
       tasks: newTasks,
@@ -660,6 +719,10 @@ class _ProfessionCardState extends State<ProfessionCard> {
       professionName: widget.data.professionName,
       pdfName1: widget.data.pdfName1,
       pdfName2: widget.data.pdfName2,
+      pdf2Name1: widget.data.pdf2Name1,
+      pdf2Name2: widget.data.pdf2Name2,
+      pdf3Name1: widget.data.pdf3Name1,
+      pdf3Name2: widget.data.pdf3Name2,
       excelName1: widget.data.excelName1,
       excelName2: widget.data.excelName2,
       tasks: widget.data.tasks,
@@ -745,6 +808,10 @@ class _ProfessionCardState extends State<ProfessionCard> {
       professionName: widget.data.professionName,
       pdfName1: widget.data.pdfName1,
       pdfName2: widget.data.pdfName2,
+      pdf2Name1: widget.data.pdf2Name1,
+      pdf2Name2: widget.data.pdf2Name2,
+      pdf3Name1: widget.data.pdf3Name1,
+      pdf3Name2: widget.data.pdf3Name2,
       excelName1: widget.data.excelName1,
       excelName2: widget.data.excelName2,
       tasks: widget.data.tasks,
@@ -830,6 +897,10 @@ class _ProfessionCardState extends State<ProfessionCard> {
       professionName: widget.data.professionName,
       pdfName1: widget.data.pdfName1,
       pdfName2: widget.data.pdfName2,
+      pdf2Name1: widget.data.pdf2Name1,
+      pdf2Name2: widget.data.pdf2Name2,
+      pdf3Name1: widget.data.pdf3Name1,
+      pdf3Name2: widget.data.pdf3Name2,
       excelName1: widget.data.excelName1,
       excelName2: widget.data.excelName2,
       tasks: widget.data.tasks,

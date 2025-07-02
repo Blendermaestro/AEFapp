@@ -19,10 +19,11 @@ class PdfService {
     required String globalNotice,
     required List<ProfessionCardData> professionCards,
     required List<String> shiftNotes,
+    int pdfTabIndex = 0, // NEW - to specify which PDF tab (0=PDF, 1=PDF2, 2=PDF3)
   }) async {
     try {
       // Get all PDF names to generate individual PDFs
-      final List<Map<String, dynamic>> allPdfNames = _getAllPdfNamesWithCards(professionCards);
+      final List<Map<String, dynamic>> allPdfNames = _getAllPdfNamesWithCards(professionCards, pdfTabIndex);
       
       print('📊 PDF EXPORT SUMMARY:');
       print('Supervisor: "$pdfSupervisor"');
@@ -75,6 +76,7 @@ class PdfService {
     required String date,
     required List<ProfessionCardData> professionCards,
     required List<String> shiftNotes,
+    int pdfTabIndex = 0, // NEW - to specify which PDF tab names to use in summary
   }) async {
     try {
       print('📄 Exporting summary only...');
@@ -87,6 +89,7 @@ class PdfService {
         globalNotice: '', // Not needed for summary
         professionCards: professionCards,
         shiftNotes: shiftNotes,
+        pdfTabIndex: pdfTabIndex,
       );
       
       // Save with specific naming: Yhteenveto_supervisor_shift_date.pdf
@@ -101,21 +104,43 @@ class PdfService {
   }
   
   /// Get all PDF names from profession cards with their associated card data
-  static List<Map<String, dynamic>> _getAllPdfNamesWithCards(List<ProfessionCardData> cards) {
+  static List<Map<String, dynamic>> _getAllPdfNamesWithCards(List<ProfessionCardData> cards, int tabIndex) {
     final List<Map<String, dynamic>> namesWithCards = [];
     
     for (final card in cards) {
+      String name1, name2;
+      
+      // Get the correct names based on tab index
+      switch (tabIndex) {
+        case 0: // PDF tab
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+        case 1: // PDF2 tab
+          name1 = card.pdf2Name1;
+          name2 = card.pdf2Name2;
+          break;
+        case 2: // PDF3 tab
+          name1 = card.pdf3Name1;
+          name2 = card.pdf3Name2;
+          break;
+        default:
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+      }
+      
       // Add name_1 if it exists
-      if (card.pdfName1.isNotEmpty) {
+      if (name1.isNotEmpty) {
         namesWithCards.add({
-          'name': card.pdfName1,
+          'name': name1,
           'card': card,
         });
       }
       // Add name_2 if it exists  
-      if (card.pdfName2.isNotEmpty) {
+      if (name2.isNotEmpty) {
         namesWithCards.add({
-          'name': card.pdfName2,
+          'name': name2,
           'card': card,
         });
       }
@@ -422,6 +447,7 @@ class PdfService {
     required String globalNotice,
     required List<ProfessionCardData> professionCards,
     required List<String> shiftNotes,
+    int pdfTabIndex = 0, // NEW - to specify which PDF tab names to use
   }) async {
     print('📄 Generating summary page...');
     
@@ -471,11 +497,33 @@ class PdfService {
     
     yPosition = 60; // Start content after header
     
-    // Calculate total manpower (PDF workers only)
+    // Calculate total manpower (PDF workers only - for the specific tab)
     int totalManpower = 0;
     for (final card in professionCards) {
-      if (card.pdfName1.isNotEmpty) totalManpower++;
-      if (card.pdfName2.isNotEmpty) totalManpower++;
+      String name1, name2;
+      
+      // Get the correct names based on tab index
+      switch (pdfTabIndex) {
+        case 0: // PDF tab
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+        case 1: // PDF2 tab
+          name1 = card.pdf2Name1;
+          name2 = card.pdf2Name2;
+          break;
+        case 2: // PDF3 tab
+          name1 = card.pdf3Name1;
+          name2 = card.pdf3Name2;
+          break;
+        default:
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+      }
+      
+      if (name1.isNotEmpty) totalManpower++;
+      if (name2.isNotEmpty) totalManpower++;
     }
     
     // Basic information
@@ -513,9 +561,30 @@ class PdfService {
         yPosition = 15; // Consistent top padding for new pages
       }
       
-      if (card.professionName.isNotEmpty || card.pdfName1.isNotEmpty || card.pdfName2.isNotEmpty) {
-        // PDF workers (the ones that actually appear in the work cards)
-        final pdfWorkers = [card.pdfName1, card.pdfName2]
+      // Get the correct names for this tab
+      String name1, name2;
+      switch (pdfTabIndex) {
+        case 0: // PDF tab
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+        case 1: // PDF2 tab
+          name1 = card.pdf2Name1;
+          name2 = card.pdf2Name2;
+          break;
+        case 2: // PDF3 tab
+          name1 = card.pdf3Name1;
+          name2 = card.pdf3Name2;
+          break;
+        default:
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+      }
+      
+      if (card.professionName.isNotEmpty || name1.isNotEmpty || name2.isNotEmpty) {
+        // PDF workers (the ones that actually appear in the work cards for this tab)
+        final pdfWorkers = [name1, name2]
             .where((name) => name.isNotEmpty)
             .join(', ');
         
