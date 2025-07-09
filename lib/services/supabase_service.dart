@@ -476,6 +476,8 @@ class SupabaseService {
         'user_email': null,
         'status': 'open',
         'priority': 'medium',
+        'consent_timestamp': DateTime.now().toIso8601String(),
+        'data_retention_until': DateTime.now().add(const Duration(days: 730)).toIso8601String(), // 2 years
       };
 
       print('SupabaseService: Submitting feedback: ${feedbackData['subject']}');

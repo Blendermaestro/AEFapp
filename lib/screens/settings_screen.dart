@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'feedback_screen.dart';
 
 // Name database - now mutable
 List<String> nameDatabase = [
@@ -471,44 +470,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Feedback Section
-                _buildSectionTitle('Palaute ja tuki'),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.feedback, color: Colors.orange),
-                          title: const Text('Lähetä palautetta'),
-                          subtitle: const Text('Raportoi virheitä tai ehdota parannuksia'),
-                          trailing: const Icon(Icons.arrow_forward_ios),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const FeedbackScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        const Divider(),
-                        ListTile(
-                          leading: const Icon(Icons.help, color: Colors.blue),
-                          title: const Text('Käyttöohje'),
-                          subtitle: const Text('Näytä sovelluksen käyttöohje'),
-                          trailing: const Icon(Icons.arrow_forward_ios),
-                          onTap: () {
-                            Navigator.pop(context); // Close settings first
-                            // Find the work card screen and show user guide
-                            // This will trigger the help guide from the main screen
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+
 
                 // Supervisor Database Section
                 _buildSectionTitle('Työnjohtajat (${supervisorDatabase.length} työnjohtajaa)'),

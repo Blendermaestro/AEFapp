@@ -17,6 +17,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   String _selectedFeedbackType = 'feedback';
   String _selectedTable = 'General';
   bool _isSubmitting = false;
+  bool _hasConsented = false;
 
   final List<Map<String, String>> _feedbackTypes = [
     {'value': 'feedback', 'label': 'Palaute'},
@@ -51,6 +52,16 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   Future<void> _submitFeedback() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (!_hasConsented) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sinun tulee hyväksyä tietosuojaehdot ennen lähettämistä.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -260,6 +271,127 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // GDPR Compliance Section
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.privacy_tip, color: Theme.of(context).primaryColor),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Tietosuoja',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Käsiteltävät tiedot:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '• Lähettäjän nimi (valinnainen)\n• Palautteen sisältö\n• Lähetysaika\n• Käyttäjätunnus (tekninen)',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Käyttötarkoitus:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Sovelluksen kehittäminen ja virheiden korjaaminen.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Säilytysaika:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Palautteet säilytetään 2 vuotta, jonka jälkeen ne poistetaan automaattisesti.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Oikeutesi:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Voit pyytää tietojesi tarkastelua, oikaisua tai poistamista ottamalla yhteyttä sovelluksen ylläpitäjään.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Checkbox(
+                                      value: _hasConsented,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _hasConsented = value ?? false;
+                                        });
+                                      },
+                                    ),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _hasConsented = !_hasConsented;
+                                          });
+                                        },
+                                        child: Text(
+                                          'Hyväksyn yllä kuvatun henkilötietojeni käsittelyn palautteen lähettämiseksi.',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 24),
 
