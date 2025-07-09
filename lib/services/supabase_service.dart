@@ -445,4 +445,63 @@ class SupabaseService {
     final isEmailUser = user.userMetadata?['is_email_user'] as bool?;
     return isEmailUser ?? true; // Default to email user for backwards compatibility
   }
+
+  /// Submit feedback or bug report
+  static Future<void> submitFeedback({
+    required String senderName,
+    required String feedbackType,
+    required String relatedTable,
+    required String subject,
+    required String description,
+  }) async {
+    if (!isLoggedIn) {
+      print('SupabaseService: Not logged in, cannot submit feedback');
+      throw Exception('Kirjautuminen vaaditaan palautteen lähettämiseen');
+    }
+
+    final currentUser = client?.auth.currentUser;
+    if (currentUser == null) {
+      print('SupabaseService: No current user');
+      throw Exception('Käyttäjätietojen lataus epäonnistui');
+    }
+
+    try {
+      final feedbackData = {
+        'user_id': currentUser.id,
+        'sender_name': senderName.trim().isEmpty ? 'Nimetön' : senderName.trim(),
+        'feedback_type': feedbackType,
+        'related_table': relatedTable,
+        'subject': subject.trim(),
+        'description': description.trim(),
+        'user_email': null,
+        'status': 'open',
+        'priority': 'medium',
+      };
+
+      print('SupabaseService: Submitting feedback: ${feedbackData['subject']}');
+      await client?.from('feedback').insert(feedbackData);
+      print('SupabaseService: Successfully submitted feedback');
+    } catch (e) {
+      print('SupabaseService: Error submitting feedback: $e');
+      throw Exception('Palautteen lähettäminen epäonnistui: $e');
+    }
+  }
+
+  /// Load user's feedback submissions
+  static Future<List<Map<String, dynamic>>> loadUserFeedback() async {
+    if (!isLoggedIn) return [];
+
+    try {
+      final response = await client
+          ?.from('feedback')
+          .select()
+          .eq('user_id', currentUser!.id)
+          .order('created_at', ascending: false);
+
+      return response ?? [];
+    } catch (e) {
+      print('SupabaseService: Error loading feedback: $e');
+      return [];
+    }
+  }
 } 

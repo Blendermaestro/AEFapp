@@ -6,6 +6,7 @@ import '../widgets/global_notice_field.dart';
 import '../widgets/profession_card.dart';
 import '../widgets/excel_specific_fields.dart';
 import '../screens/settings_screen.dart';
+import '../screens/feedback_screen.dart';
 import '../services/supabase_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/excel_service.dart';
@@ -485,6 +486,19 @@ class _WorkCardScreenState extends State<WorkCardScreen>
             onPressed: _showUserGuide,
             icon: const Icon(Icons.help_outline),
             tooltip: 'Käyttöohje',
+          ),
+          // Feedback button
+          IconButton(
+            onPressed: SupabaseService.isLoggedIn ? _openFeedback : null,
+            icon: Icon(
+              Icons.feedback,
+              color: !SupabaseService.isLoggedIn 
+                  ? Colors.grey.shade400
+                  : Colors.orange,
+            ),
+            tooltip: SupabaseService.isLoggedIn 
+                ? 'Lähetä palautetta' 
+                : 'Kirjaudu sisään lähettääksesi palautetta',
           ),
           // Manual Save button (always visible, disabled when not logged in)
           IconButton(
@@ -1422,6 +1436,17 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           isDarkMode: isDarkMode,
           onThemeChanged: widget.onThemeChanged,
         ),
+      ),
+    );
+    // The focus state will be preserved when returning
+  }
+
+  void _openFeedback() async {
+    // Don't unfocus text fields when navigating to feedback
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const FeedbackScreen(),
       ),
     );
     // The focus state will be preserved when returning
