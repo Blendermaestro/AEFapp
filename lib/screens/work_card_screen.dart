@@ -865,8 +865,10 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     }
 
     // Show preview dialog first
-    final confirmed = await _showWorkCardPreviewDialog(tabIndex);
-    if (!confirmed) return;
+    final dialogResult = await _showWorkCardPreviewDialog(tabIndex);
+    if (dialogResult == null || dialogResult['confirmed'] != true) return;
+    
+    final bool includeSuojapaikat = dialogResult['includeSuojapaikat'] ?? false;
 
     try {
       // Show loading indicator
@@ -882,6 +884,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         professionCards: professionCards,
         shiftNotes: currentShiftNotes,
         pdfTabIndex: tabIndex,
+        includeSuojapaikat: includeSuojapaikat,
       );
 
       // Success feedback
@@ -1198,7 +1201,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
     );
   }
 
-  Future<bool> _showWorkCardPreviewDialog(int tabIndex) async {
+  Future<Map<String, dynamic>?> _showWorkCardPreviewDialog(int tabIndex) async {
     final workCards = _getWorkCardsForTab(tabIndex);
     
     if (workCards.isEmpty) {
@@ -1208,7 +1211,7 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           backgroundColor: Colors.red,
         ),
       );
-      return false;
+      return null;
     }
 
     String tabName = '';
@@ -1218,47 +1221,77 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       case 2: tabName = 'PDF3'; break;
     }
 
-    final confirmed = await showDialog<bool>(
+    bool includeSuojapaikat = false;
+
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Tulosta $tabName-työkortit'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Nämä työkortit tulostetaan:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Tulosta $tabName-työkortit'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Nämä työkortit tulostetaan:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  ...workCards.map((card) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('• ${card['profession']} - ${card['names'].join(', ')}'),
+                  )),
+                  const SizedBox(height: 12),
+                  Text('Yhteensä: ${workCards.fold<int>(0, (sum, card) => sum + (card['names'] as List<String>).length)} työkorttia'),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: includeSuojapaikat,
+                        onChanged: (value) {
+                          setState(() {
+                            includeSuojapaikat = value ?? false;
+                          });
+                        },
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Sisällytä suojapaikat',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              ...workCards.map((card) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('• ${card['profession']} - ${card['names'].join(', ')}'),
-              )),
-              const SizedBox(height: 12),
-              Text('Yhteensä: ${workCards.fold<int>(0, (sum, card) => sum + (card['names'] as List<String>).length)} työkorttia'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Peruuta'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Tulosta'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  child: const Text('Peruuta'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop({
+                    'confirmed': true,
+                    'includeSuojapaikat': includeSuojapaikat,
+                  }),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Tulosta'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
-    return confirmed ?? false;
+    return result;
   }
 
   Future<bool> _showSummaryPreviewDialog(int tabIndex) async {

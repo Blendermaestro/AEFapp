@@ -20,6 +20,7 @@ class PdfService {
     required List<ProfessionCardData> professionCards,
     required List<String> shiftNotes,
     int pdfTabIndex = 0, // NEW - to specify which PDF tab (0=PDF, 1=PDF2, 2=PDF3)
+    bool includeSuojapaikat = false, // NEW - to choose template with Suojapaikat
   }) async {
     try {
       // Get all PDF names to generate individual PDFs
@@ -50,6 +51,7 @@ class PdfService {
           date: pdfDate,
           globalNotice: globalNotice,
           workerCard: card,
+          includeSuojapaikat: includeSuojapaikat,
         );
         
         individualPdfs.add(pdfBytes);
@@ -157,6 +159,7 @@ class PdfService {
     required String date,
     required String globalNotice,
     required ProfessionCardData workerCard,
+    bool includeSuojapaikat = false,
   }) async {
     try {
       // Method 1: Try to create PDF with template using Syncfusion
@@ -167,6 +170,7 @@ class PdfService {
         date: date,
         globalNotice: globalNotice,
         workerCard: workerCard,
+        includeSuojapaikat: includeSuojapaikat,
       );
     } catch (e) {
       print('⚠️ Syncfusion template failed: $e');
@@ -178,6 +182,7 @@ class PdfService {
         date: date,
         globalNotice: globalNotice,
         workerCard: workerCard,
+        includeSuojapaikat: includeSuojapaikat,
       );
     }
   }
@@ -190,11 +195,17 @@ class PdfService {
     required String date,
     required String globalNotice,
     required ProfessionCardData workerCard,
+    bool includeSuojapaikat = false,
   }) async {
+    // Choose correct template based on checkbox
+    final String templatePath = includeSuojapaikat 
+        ? 'assets/template_workcard_blank_SP.pdf'
+        : 'assets/template_workcard_blank.pdf';
+    
     // Load template PDF bytes
-    final ByteData templateData = await rootBundle.load('assets/template_workcard_blank.pdf');
+    final ByteData templateData = await rootBundle.load(templatePath);
     final Uint8List templateBytes = templateData.buffer.asUint8List();
-    print('✅ Template PDF loaded (${templateBytes.length} bytes)');
+    print('✅ Template PDF loaded from $templatePath (${templateBytes.length} bytes)');
     
     // Load existing PDF template using Syncfusion
     final PdfDocument templateDocument = PdfDocument(inputBytes: templateBytes);
@@ -808,6 +819,7 @@ class PdfService {
     required String date,
     required String globalNotice,
     required ProfessionCardData workerCard,
+    bool includeSuojapaikat = false, // For consistency, though not used in fallback
   }) async {
     // Create new PDF document
     final PdfDocument document = PdfDocument();
