@@ -551,8 +551,41 @@ class PdfService {
     graphics.drawString('Työntekijät:', normalFont, brush: blackBrush, bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15));
     yPosition += 17;
     
-    // Profession cards with their workers, tasks, and new fields
+    // Filter profession cards to only include those with names for this tab
+    final includedCards = <ProfessionCardData>[];
+    final excludedGroups = <String>[];
+    
     for (final card in professionCards) {
+      String name1, name2;
+      switch (pdfTabIndex) {
+        case 0: // PDF tab
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+        case 1: // PDF2 tab
+          name1 = card.pdf2Name1;
+          name2 = card.pdf2Name2;
+          break;
+        case 2: // PDF3 tab
+          name1 = card.pdf3Name1;
+          name2 = card.pdf3Name2;
+          break;
+        default:
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+      }
+      
+      if (name1.isNotEmpty || name2.isNotEmpty) {
+        includedCards.add(card);
+      } else {
+        final groupName = card.professionName.isEmpty ? 'Nimetön' : card.professionName;
+        excludedGroups.add(groupName);
+      }
+    }
+    
+    // Process only included cards
+    for (final card in includedCards) {
       // Check if we need a new page
       if (yPosition > pageHeight - 100) { // Better threshold for portrait pages
         // Start new page
@@ -582,107 +615,125 @@ class PdfService {
           break;
       }
       
-      if (card.professionName.isNotEmpty || name1.isNotEmpty || name2.isNotEmpty) {
-        // PDF workers (the ones that actually appear in the work cards for this tab)
-        final pdfWorkers = [name1, name2]
-            .where((name) => name.isNotEmpty)
-            .join(', ');
-        
-        // Bold profession name with normal workers names on the same line
-        final professionText = card.professionName.isEmpty ? 'Määrittelemätön' : card.professionName;
-        
-        // Draw profession name in bold
+      // PDF workers (the ones that actually appear in the work cards for this tab)
+      final pdfWorkers = [name1, name2]
+          .where((name) => name.isNotEmpty)
+          .join(', ');
+      
+      // Bold profession name with normal workers names on the same line
+      final professionText = card.professionName.isEmpty ? 'Määrittelemätön' : card.professionName;
+      
+      // Draw profession name in bold
+      graphics.drawString(
+        '• $professionText',
+        professionFont, // Bold font for profession only
+        brush: blackBrush,
+        bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+      );
+      
+      // Draw worker names in normal font if any
+      if (pdfWorkers.isNotEmpty) {
+        final professionWidth = professionFont.measureString('• $professionText').width;
         graphics.drawString(
-          '• $professionText',
-          professionFont, // Bold font for profession only
+          ': $pdfWorkers',
+          normalFont, // Normal font for worker names
+          brush: blackBrush,
+          bounds: Rect.fromLTWH(15 + professionWidth, yPosition, pageWidth - professionWidth, 15),
+        );
+      }
+      yPosition += 15;
+      
+      // Tasks section with header
+      final activeTasks = card.tasks.where((task) => task.task.isNotEmpty).toList();
+      if (activeTasks.isNotEmpty) {
+        graphics.drawString(
+          '    Tehtävät:',
+          normalFont, // Same size as profession text, not bold
           brush: blackBrush,
           bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
         );
+        yPosition += 12;
         
-        // Draw worker names in normal font if any
-        if (pdfWorkers.isNotEmpty) {
-          final professionWidth = professionFont.measureString('• $professionText').width;
+        for (final task in activeTasks) {
+          final taskText = task.taskNotice.isNotEmpty ? '${task.task} - ${task.taskNotice}' : task.task;
           graphics.drawString(
-            ': $pdfWorkers',
-            normalFont, // Normal font for worker names
-            brush: blackBrush,
-            bounds: Rect.fromLTWH(15 + professionWidth, yPosition, pageWidth - professionWidth, 15),
-          );
-        }
-        yPosition += 15;
-        
-        // Tasks section with header
-        final activeTasks = card.tasks.where((task) => task.task.isNotEmpty).toList();
-        if (activeTasks.isNotEmpty) {
-          graphics.drawString(
-            '    Tehtävät:',
-            normalFont, // Same size as profession text, not bold
-            brush: blackBrush,
+            '      - $taskText',
+            smallFont,
+            brush: grayBrush,
             bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
           );
-          yPosition += 12;
-          
-          for (final task in activeTasks) {
-            final taskText = task.taskNotice.isNotEmpty ? '${task.task} - ${task.taskNotice}' : task.task;
-            graphics.drawString(
-              '      - $taskText',
-              smallFont,
-              brush: grayBrush,
-              bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
-            );
-            yPosition += 11; // More spacing between tasks
-          }
-          yPosition += 3; // Extra space after tasks section
+          yPosition += 11; // More spacing between tasks
         }
-        
-        // Work Site Conditions section with header
-        final activeWorkSiteConditions = card.workSiteConditions.where((condition) => condition.isNotEmpty).toList();
-        if (activeWorkSiteConditions.isNotEmpty) {
-          graphics.drawString(
-            '    Työkohteen tämänhetkinen tila:',
-            normalFont, // Same size as profession text, not bold
-            brush: blackBrush,
-            bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
-          );
-          yPosition += 12;
-          
-          for (final condition in activeWorkSiteConditions) {
-            graphics.drawString(
-              '      - $condition',
-              smallFont,
-              brush: grayBrush,
-              bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
-            );
-            yPosition += 11;
-          }
-          yPosition += 3; // Extra space after section
-        }
-        
-        // Supervisor Risk Notes section with header
-        final activeSupervisorRiskNotes = card.supervisorRiskNotes.where((note) => note.isNotEmpty).toList();
-        if (activeSupervisorRiskNotes.isNotEmpty) {
-          graphics.drawString(
-            '    Työnjohtajan huomiot riskeistä:',
-            normalFont, // Same size as profession text, not bold
-            brush: blackBrush,
-            bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
-          );
-          yPosition += 12;
-          
-          for (final note in activeSupervisorRiskNotes) {
-            graphics.drawString(
-              '      - $note',
-              smallFont,
-              brush: grayBrush,
-              bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
-            );
-            yPosition += 11;
-          }
-          yPosition += 3; // Extra space after section
-        }
-        
-        yPosition += 12; // Better space between cards
+        yPosition += 3; // Extra space after tasks section
       }
+      
+      // Work Site Conditions section with header
+      final activeWorkSiteConditions = card.workSiteConditions.where((condition) => condition.isNotEmpty).toList();
+      if (activeWorkSiteConditions.isNotEmpty) {
+        graphics.drawString(
+          '    Työkohteen tämänhetkinen tila:',
+          normalFont, // Same size as profession text, not bold
+          brush: blackBrush,
+          bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+        );
+        yPosition += 12;
+        
+        for (final condition in activeWorkSiteConditions) {
+          graphics.drawString(
+            '      - $condition',
+            smallFont,
+            brush: grayBrush,
+            bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+          );
+          yPosition += 11;
+        }
+        yPosition += 3; // Extra space after section
+      }
+      
+      // Supervisor Risk Notes section with header
+      final activeSupervisorRiskNotes = card.supervisorRiskNotes.where((note) => note.isNotEmpty).toList();
+      if (activeSupervisorRiskNotes.isNotEmpty) {
+        graphics.drawString(
+          '    Työnjohtajan huomiot riskeistä:',
+          normalFont, // Same size as profession text, not bold
+          brush: blackBrush,
+          bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+        );
+        yPosition += 12;
+        
+        for (final note in activeSupervisorRiskNotes) {
+          graphics.drawString(
+            '      - $note',
+            smallFont,
+            brush: grayBrush,
+            bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+          );
+          yPosition += 11;
+        }
+        yPosition += 3; // Extra space after section
+      }
+      
+      yPosition += 12; // Better space between cards
+    }
+    
+    // Add excluded groups notice if there are any
+    if (excludedGroups.isNotEmpty) {
+      // Check if we need a new page for the excluded groups notice
+      if (yPosition > pageHeight - 50) {
+        final newPage = document.pages.add();
+        graphics = newPage.graphics;
+        yPosition = 15;
+      }
+      
+      yPosition += 20; // Extra space before the notice
+      final excludedText = 'Näitä ryhmiä ei sisällytetty koska nimiä ei määritelty: ${excludedGroups.join(', ')}';
+      
+      graphics.drawString(
+        excludedText,
+        normalFont,
+        brush: grayBrush,
+        bounds: Rect.fromLTWH(15, yPosition, pageWidth, 15),
+      );
     }
     
     // Save the document

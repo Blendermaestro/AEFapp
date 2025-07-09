@@ -864,6 +864,10 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         return;
     }
 
+    // Show preview dialog first
+    final confirmed = await _showWorkCardPreviewDialog(tabIndex);
+    if (!confirmed) return;
+
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
@@ -924,6 +928,10 @@ class _WorkCardScreenState extends State<WorkCardScreen>
       default:
         return;
     }
+
+    // Show preview dialog first
+    final confirmed = await _showSummaryPreviewDialog(tabIndex);
+    if (!confirmed) return;
 
     try {
       // Show loading indicator
@@ -1188,6 +1196,188 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+  Future<bool> _showWorkCardPreviewDialog(int tabIndex) async {
+    final workCards = _getWorkCardsForTab(tabIndex);
+    
+    if (workCards.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ei työntekijöitä määritelty. Lisää nimiä ennen tulostusta.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    String tabName = '';
+    switch (tabIndex) {
+      case 0: tabName = 'PDF'; break;
+      case 1: tabName = 'PDF2'; break;
+      case 2: tabName = 'PDF3'; break;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Tulosta $tabName-työkortit'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nämä työkortit tulostetaan:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ...workCards.map((card) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('• ${card['profession']} - ${card['names'].join(', ')}'),
+              )),
+              const SizedBox(height: 12),
+              Text('Yhteensä: ${workCards.fold<int>(0, (sum, card) => sum + (card['names'] as List<String>).length)} työkorttia'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Peruuta'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Tulosta'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
+  Future<bool> _showSummaryPreviewDialog(int tabIndex) async {
+    final includedGroups = <String>[];
+    final excludedGroups = <String>[];
+    
+    for (final card in professionCards) {
+      String name1 = '', name2 = '';
+      switch (tabIndex) {
+        case 0:
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+        case 1:
+          name1 = card.pdf2Name1;
+          name2 = card.pdf2Name2;
+          break;
+        case 2:
+          name1 = card.pdf3Name1;
+          name2 = card.pdf3Name2;
+          break;
+      }
+      
+      if (name1.isNotEmpty || name2.isNotEmpty) {
+        includedGroups.add(card.professionName.isEmpty ? 'Nimetön' : card.professionName);
+      } else {
+        excludedGroups.add(card.professionName.isEmpty ? 'Nimetön' : card.professionName);
+      }
+    }
+
+    String tabName = '';
+    switch (tabIndex) {
+      case 0: tabName = 'PDF'; break;
+      case 1: tabName = 'PDF2'; break;
+      case 2: tabName = 'PDF3'; break;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Tulosta $tabName-yhteenveto'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (includedGroups.isNotEmpty) ...[
+                const Text(
+                  'Yhteenvetoon sisällytetään:',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                ),
+                const SizedBox(height: 8),
+                ...includedGroups.map((group) => Text('• $group')),
+                const SizedBox(height: 12),
+              ],
+              if (excludedGroups.isNotEmpty) ...[
+                const Text(
+                  'Jätetään pois (ei nimiä):',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                ),
+                const SizedBox(height: 8),
+                ...excludedGroups.map((group) => Text('• $group')),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Peruuta'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Tulosta'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
+  List<Map<String, dynamic>> _getWorkCardsForTab(int tabIndex) {
+    final List<Map<String, dynamic>> workCards = [];
+    
+    for (final card in professionCards) {
+      String name1 = '', name2 = '';
+      switch (tabIndex) {
+        case 0:
+          name1 = card.pdfName1;
+          name2 = card.pdfName2;
+          break;
+        case 1:
+          name1 = card.pdf2Name1;
+          name2 = card.pdf2Name2;
+          break;
+        case 2:
+          name1 = card.pdf3Name1;
+          name2 = card.pdf3Name2;
+          break;
+      }
+      
+      final names = <String>[];
+      if (name1.isNotEmpty) names.add(name1);
+      if (name2.isNotEmpty) names.add(name2);
+      
+      if (names.isNotEmpty) {
+        workCards.add({
+          'profession': card.professionName.isEmpty ? 'Nimetön' : card.professionName,
+          'names': names,
+        });
+      }
+    }
+    
+    return workCards;
   }
 
   void _openSettings(bool isDarkMode) async {
