@@ -630,28 +630,50 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: 180,
-                child: ElevatedButton.icon(
-                  onPressed: () => _exportPDFForTab(tabIndex),
-                  icon: const Icon(Icons.picture_as_pdf, size: 18),
-                  label: const Text('Työkortti'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    foregroundColor: Colors.white,
+              Flexible(
+                child: SizedBox(
+                  width: 115,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _exportPDFForTab(tabIndex),
+                    icon: const Icon(Icons.picture_as_pdf, size: 16),
+                    label: const Text('Työkortti', style: TextStyle(fontSize: 11)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 180,
-                child: ElevatedButton.icon(
-                  onPressed: () => _exportSummaryForTab(tabIndex),
-                  icon: const Icon(Icons.summarize, size: 18),
-                  label: const Text('Yhteenveto'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
+              const SizedBox(width: 4),
+              Flexible(
+                child: SizedBox(
+                  width: 115,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _exportSummaryForTab(tabIndex),
+                    icon: const Icon(Icons.summarize, size: 16),
+                    label: const Text('Yhteenveto', style: TextStyle(fontSize: 11)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: SizedBox(
+                  width: 115,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showClearConfirmationDialog(tabIndex),
+                    icon: const Icon(Icons.clear_all, size: 16),
+                    label: const Text('Tyhjennä', style: TextStyle(fontSize: 11)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    ),
                   ),
                 ),
               ),
@@ -675,15 +697,34 @@ class _WorkCardScreenState extends State<WorkCardScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: 180,
-                child: ElevatedButton.icon(
-                  onPressed: _exportExcel,
-                  icon: const Icon(Icons.table_chart, size: 18),
-                  label: const Text('Tulosta Excel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
+              Flexible(
+                child: SizedBox(
+                  width: 160,
+                  child: ElevatedButton.icon(
+                    onPressed: _exportExcel,
+                    icon: const Icon(Icons.table_chart, size: 16),
+                    label: const Text('Tulosta Excel', style: TextStyle(fontSize: 11)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: SizedBox(
+                  width: 160,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showClearConfirmationDialog(3), // Excel tab index is 3
+                    icon: const Icon(Icons.clear_all, size: 16),
+                    label: const Text('Tyhjennä', style: TextStyle(fontSize: 11)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    ),
                   ),
                 ),
               ),
@@ -949,6 +990,204 @@ class _WorkCardScreenState extends State<WorkCardScreen>
         ),
       );
     }
+  }
+
+  void _showClearConfirmationDialog(int tabIndex) {
+    String tabName = '';
+    List<Widget> clearItems = [];
+    
+    switch (tabIndex) {
+      case 0:
+        tabName = 'PDF';
+        clearItems = [
+          const Text('• Kaikki tehtävät (näkyy kaikissa välilehdissä)'),
+          const Text('• Yleinen huomio (näkyy kaikissa välilehdissä)'),
+          const Text('• Työkohteen tämänhetkinen tila'),
+          const Text('• Tehtävä lisätiedot'),
+          const Text('• Riskihuomiot'),
+          const Text('• PDF-välilehden huomiot seuraavalle vuorolle'),
+        ];
+        break;
+      case 1:
+        tabName = 'PDF2';
+        clearItems = [
+          const Text('• Kaikki tehtävät (näkyy kaikissa välilehdissä)'),
+          const Text('• Yleinen huomio (näkyy kaikissa välilehdissä)'),
+          const Text('• Työkohteen tämänhetkinen tila'),
+          const Text('• Tehtävä lisätiedot'),
+          const Text('• Riskihuomiot'),
+          const Text('• PDF2-välilehden huomiot seuraavalle vuorolle'),
+        ];
+        break;
+      case 2:
+        tabName = 'PDF3';
+        clearItems = [
+          const Text('• Kaikki tehtävät (näkyy kaikissa välilehdissä)'),
+          const Text('• Yleinen huomio (näkyy kaikissa välilehdissä)'),
+          const Text('• Työkohteen tämänhetkinen tila'),
+          const Text('• Tehtävä lisätiedot'),
+          const Text('• Riskihuomiot'),
+          const Text('• PDF3-välilehden huomiot seuraavalle vuorolle'),
+        ];
+        break;
+      case 3:
+        tabName = 'Excel';
+        clearItems = [
+          const Text('• Kaikki tehtävät (näkyy kaikissa välilehdissä)'),
+          const Text('• Työkohteen tämänhetkinen tila'),
+          const Text('• Tehtävä lisätiedot'),
+          const Text('• Riskihuomiot'),
+          const Text('• Ajoneuvot ja sijainnit'),
+          const Text('• Erityishuomiot (Excel-erityinen)'),
+          const Text('• Lisätyöt (Excel-erityinen)'),
+        ];
+        break;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Tyhjennä $tabName-välilehti'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tämä toiminto tyhjentää seuraavat tiedot:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ...clearItems,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: const Text(
+                  'HUOM: Tehtävät tyhjennetään KAIKISTA välilehdistä!',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: const Text(
+                  'EI TYHJENNETÄ: Nimet ja aselaji säilyvät ennallaan.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Haluatko varmasti jatkaa?'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Peruuta'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _clearTabData(tabIndex);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Tyhjennä'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _clearTabData(int tabIndex) {
+    setState(() {
+      // Clear tasks from all profession cards (affects all tabs)
+      for (var card in professionCards) {
+        card.tasks = [TaskData()]; // Reset to single empty task
+        // Clear work site conditions and supervisor risk notes (affects all tabs)
+        card.workSiteConditions = [''];
+        card.supervisorRiskNotes = [''];
+        
+        // Clear equipment and location ONLY for Excel tab
+        if (tabIndex == 3) {
+          card.equipment = '';
+          card.equipmentLocation = '';
+        }
+      }
+      
+      // Clear tab-specific data
+      switch (tabIndex) {
+        case 0: // PDF tab
+          globalNotice = '';
+          shiftNotes = [''];
+          _shiftNoteControllers.clear();
+          _shiftNoteControllers.add(TextEditingController(text: ''));
+          break;
+        case 1: // PDF2 tab
+          globalNotice = '';
+          shiftNotes2 = [''];
+          _shiftNoteControllers2.clear();
+          _shiftNoteControllers2.add(TextEditingController(text: ''));
+          break;
+        case 2: // PDF3 tab
+          globalNotice = '';
+          shiftNotes3 = [''];
+          _shiftNoteControllers3.clear();
+          _shiftNoteControllers3.add(TextEditingController(text: ''));
+          break;
+        case 3: // Excel tab
+          // Clear Excel-specific fields
+          comments = [''];
+          extraWork = [''];
+          // Don't clear global notice for Excel tab
+          break;
+      }
+    });
+    
+    // Save the changes
+    _saveData();
+    
+    // Show success message
+    String tabName = '';
+    switch (tabIndex) {
+      case 0:
+        tabName = 'PDF';
+        break;
+      case 1:
+        tabName = 'PDF2';
+        break;
+      case 2:
+        tabName = 'PDF3';
+        break;
+      case 3:
+        tabName = 'Excel';
+        break;
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$tabName-välilehti tyhjennetty onnistuneesti!'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _openSettings(bool isDarkMode) async {
