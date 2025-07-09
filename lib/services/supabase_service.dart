@@ -487,21 +487,5 @@ class SupabaseService {
     }
   }
 
-  /// Load user's feedback submissions
-  static Future<List<Map<String, dynamic>>> loadUserFeedback() async {
-    if (!isLoggedIn) return [];
 
-    try {
-      final response = await client
-          ?.from('feedback')
-          .select()
-          .eq('user_id', currentUser!.id)
-          .order('created_at', ascending: false);
-
-      return response ?? [];
-    } catch (e) {
-      print('SupabaseService: Error loading feedback: $e');
-      return [];
-    }
-  }
 } 

@@ -17,8 +17,6 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   String _selectedFeedbackType = 'feedback';
   String _selectedTable = 'General';
   bool _isSubmitting = false;
-  List<Map<String, dynamic>> _previousFeedback = [];
-  bool _isLoadingPrevious = false;
 
   final List<Map<String, String>> _feedbackTypes = [
     {'value': 'feedback', 'label': 'Palaute'},
@@ -39,7 +37,6 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPreviousFeedback();
   }
 
   @override
@@ -50,24 +47,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPreviousFeedback() async {
-    setState(() {
-      _isLoadingPrevious = true;
-    });
 
-    try {
-      final feedback = await SupabaseService.loadUserFeedback();
-      setState(() {
-        _previousFeedback = feedback;
-      });
-    } catch (e) {
-      print('Error loading previous feedback: $e');
-    } finally {
-      setState(() {
-        _isLoadingPrevious = false;
-      });
-    }
-  }
 
   Future<void> _submitFeedback() async {
     if (!_formKey.currentState!.validate()) return;
@@ -88,9 +68,6 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       // Clear form
       _subjectController.clear();
       _descriptionController.clear();
-      
-      // Reload previous feedback
-      await _loadPreviousFeedback();
 
       // Show success message
       if (mounted) {
@@ -117,35 +94,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     }
   }
 
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'open':
-        return 'Avoin';
-      case 'in_progress':
-        return 'Käsittelyssä';
-      case 'resolved':
-        return 'Ratkaistu';
-      case 'closed':
-        return 'Suljettu';
-      default:
-        return status;
-    }
-  }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'open':
-        return Colors.orange;
-      case 'in_progress':
-        return Colors.blue;
-      case 'resolved':
-        return Colors.green;
-      case 'closed':
-        return Colors.grey;
-      default:
-        return Colors.grey;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -348,108 +297,6 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 24),
-
-                // Previous Feedback
-                if (_previousFeedback.isNotEmpty) ...[
-                  Text(
-                    'Aiemmat palautteesi',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  ..._previousFeedback.map((feedback) {
-                    final createdAt = DateTime.parse(feedback['created_at']);
-                    final formattedDate = '${createdAt.day}.${createdAt.month}.${createdAt.year}';
-                    
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(feedback['status']).withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: _getStatusColor(feedback['status'])),
-                                  ),
-                                  child: Text(
-                                    _getStatusText(feedback['status']),
-                                    style: TextStyle(
-                                      color: _getStatusColor(feedback['status']),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  formattedDate,
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              feedback['subject'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  _feedbackTypes.firstWhere(
-                                    (type) => type['value'] == feedback['feedback_type'],
-                                    orElse: () => {'label': feedback['feedback_type']},
-                                  )['label']!,
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                const Text(' • '),
-                                Text(
-                                  _relatedTables.firstWhere(
-                                    (table) => table['value'] == feedback['related_table'],
-                                    orElse: () => {'label': feedback['related_table']},
-                                  )['label']!,
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              feedback['description'],
-                              style: TextStyle(color: Colors.grey.shade800),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ],
-
-                if (_isLoadingPrevious)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
               ],
             ),
           ),
